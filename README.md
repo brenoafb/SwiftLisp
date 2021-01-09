@@ -1,3 +1,3 @@
 # SwiftLisp
 
-A description of this package.
+Small Lisp interpreter written in Swift.
