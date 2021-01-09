@@ -1,8 +1,8 @@
 import Foundation
 
-enum Expr {
-  case atom (String)
-  case list ([Expr])
+enum Expr : Equatable {
+  case atom(String)
+  case list([Expr])
   case nilexpr
 }
 
@@ -16,10 +16,17 @@ extension Expr : CustomStringConvertible {
       for element in elements {
         strings.append(element.description)
       }
-      return "[\(strings)]"
+      let s = strings.reduce("") { (acc, x) in
+        return acc.isEmpty ? x : acc + " " + x
+      }
+      return "[\(s)]"
     case .nilexpr:
       return "NIL"
     }
     
   }
 }
+
+//extension Expr : Equatable {
+//  
+//}
