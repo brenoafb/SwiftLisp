@@ -75,9 +75,14 @@ extension Expr: Evaluatable {
       
       let newFrame: [String:Expr] = Dictionary<String, Expr>(uniqueKeysWithValues: zip(argNames, arguments))
       let functionBody = function.getBody()
-      let newEnv = env.pushFrame(newFrame)
       
-      return functionBody?.eval(newEnv)
+      env.pushFrame(newFrame)
+      guard let result = functionBody?.eval(env) else {
+        env.popFrame()
+        return nil
+      }
+      env.popFrame()
+      return result
     }
   }
   
@@ -118,7 +123,8 @@ extension Expr: Evaluatable {
       "car",
       "cdr",
       "cons",
-      "cond"
+      "cond",
+      "define"
     ]
     
     switch self {
@@ -166,6 +172,9 @@ extension Expr: Evaluatable {
       return evalCons(exprs, env: env)
     case .atom("cond"):
       return evalCond(exprs, env: env)
+    case .atom("define"):
+      evalDefine(exprs, env: env)
+      return .list([])
     default:
       return nil
     }
@@ -274,6 +283,28 @@ extension Expr: Evaluatable {
       }
     }
     return .list([])
+  }
+  
+  static private func evalDefine(_ exprs: [Expr], env: Environment) {
+    guard exprs.count == 3 else {
+      return
+    }
+    
+    guard case let .atom(key) = exprs[1] else {
+      return
+    }
+    
+    let expr = exprs[2]
+    if expr.isLambda {
+      env.addBinding(key: key, value: expr)
+      return
+    }
+    
+    guard let value = expr.eval(env) else {
+      return
+    }
+    
+    env.addBinding(key: key, value: value)
   }
 }
 

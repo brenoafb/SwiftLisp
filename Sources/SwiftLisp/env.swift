@@ -8,9 +8,43 @@
 import Foundation
 
 typealias EnvFrame = [String:Expr]
-typealias Environment = [EnvFrame]
 
-var defaultEnvironment: Environment = [[
+class Environment {
+  
+  private var stack: [EnvFrame]
+  
+  init() {
+    stack = []
+  }
+  
+  init(_ stack: [EnvFrame]) {
+    self.stack = stack
+    self.stack.insert([:], at: 0)
+  }
+  
+  func lookup(_ s: String) -> Expr? {
+    for frame in stack {
+      if let x = frame[s] {
+        return x
+      }
+    }
+    return nil
+  }
+  
+  func pushFrame(_ newFrame: EnvFrame) {
+    stack.insert(newFrame, at: 0)
+  }
+  
+  func popFrame() {
+    let _ = stack.removeFirst()
+  }
+  
+  func addBinding(key: String, value: Expr) {
+    stack[0][key] = value
+  }
+}
+
+var defaultEnvironment = Environment([[
   "+": .native(binaryIntOperation({ $0 + $1 })),
   "*": .native(binaryIntOperation({ $0 * $1 })),
   "-": .native(binaryIntOperation({ $0 - $1 })),
@@ -20,7 +54,7 @@ var defaultEnvironment: Environment = [[
   "succ": Expr(parse: "(lambda (x) (+ x 1))")!,
   "pred": Expr(parse: "(lambda (x) (- x 1))")!,
   "square": Expr(parse: "(lambda (x) (* x x))")!,
-]]
+]])
 
 func binaryIntOperation(_ binop: @escaping (Int, Int) -> Int) -> NativeFunction {
   let function: NativeFunction = { [f = binop] (args) -> Expr? in
@@ -40,19 +74,10 @@ func binaryIntOperation(_ binop: @escaping (Int, Int) -> Int) -> NativeFunction 
   return function
 }
 
-extension Environment {
-  func lookup(_ s: String) -> Expr? {
-    for frame in self {
-      if let x = frame[s] {
-        return x
-      }
-    }
-    return nil
-  }
-  
-  func pushFrame(_ newFrame: EnvFrame) -> Environment {
-    var env = self
-    env.insert(newFrame, at: 0)
-    return env
-  }
-}
+
+
+
+
+
+
+

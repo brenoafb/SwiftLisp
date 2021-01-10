@@ -5,7 +5,6 @@ var env = defaultEnvironment
 print(">", separator: "", terminator: " ")
 while let line = readLine() {
   if let expression = Expr(parse: line) {
-    print(expression)
     if let result = expression.eval(env) {
       print("> \(result)")
     } else {
