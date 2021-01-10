@@ -163,7 +163,7 @@ extension Expr: Evaluatable {
       return nil
     }
     
-    for comp in exprs {
+    for comp in exprs[1...] {
       switch comp {
       case let .list(xs):
         guard xs.count == 2 else { return nil }
