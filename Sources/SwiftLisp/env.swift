@@ -25,9 +25,9 @@ func binaryIntOperation(_ binop: @escaping (Int, Int) -> Int) -> NativeFunction 
     guard args.count == 2 else {
       return nil
     }
-
-    if let x = args[0] as? Int {
-      if let y = args[1] as? Int {
+      
+    if case let .int(x) = args[0] as? Expr {
+      if case let .int(y) = args[1] as? Expr {
         return .int(f(x, y))
       }
     }
@@ -49,7 +49,8 @@ extension Environment {
   }
   
   func pushFrame(_ newFrame: EnvFrame) -> Environment {
-    // TODO
-    return []
+    var env = self
+    env.insert(newFrame, at: 0)
+    return env
   }
 }
