@@ -17,7 +17,9 @@ var defaultEnvironment: Environment = [[
   "/": .native(binaryIntOperation({ $0 / $1 })),
   "x": .int(3232),
   "y": .int(6464),
-  "f": Expr(parse: "(lambda (x y) (eq x y))")!
+  "succ": Expr(parse: "(lambda (x) (+ x 1))")!,
+  "pred": Expr(parse: "(lambda (x) (- x 1))")!,
+  "square": Expr(parse: "(lambda (x) (* x x))")!,
 ]]
 
 func binaryIntOperation(_ binop: @escaping (Int, Int) -> Int) -> NativeFunction {
