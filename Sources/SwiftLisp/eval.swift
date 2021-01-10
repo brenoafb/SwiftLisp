@@ -1,7 +1,5 @@
 import Foundation
 
-typealias Environment = [String:Expr]
-
 protocol Evaluatable {
   func eval(_ env: Environment) -> Expr?
 }
@@ -11,29 +9,108 @@ extension Expr: Evaluatable {
   func eval(_ env: Environment) -> Expr? {
     switch self {
     case let .list(exprs):
-      return evalList(exprs, env: env)
+      return Expr.evalList(exprs, env: env)
     case let .atom(x):
-      return env[x]
+      return env.lookup(x)
+    case let .int(x):
+      return .int(x)
+    case let .float(x):
+      return .float(x)
     default:
       return .list([])
     }
   }
   
-  private func evalList(_ exprs: [Expr], env: Environment) -> Expr? {
-    guard let first = exprs.first else {
+  static private func evalList(_ exprs: [Expr], env: Environment) -> Expr? {
+    if exprs.isEmpty {
       return Expr.list([])
     }
     
-    if isPrimitive(first) {
+    if exprs[0].isPrimitive {
       return evalPrimitive(exprs, env)
+    } else if exprs[0].isLambda {
+      let function = exprs[0]
+      if let arguments = getArguments(exprs, env: env) {
+        print("lambda application:\(function), \(arguments)")
+        return apply(function: function, arguments: arguments, env: env)
+      }
     } else {
-      // TODO
+      if let function = getFunctionBody(exprs, env: env),
+         let arguments = getArguments(exprs, env: env)
+      {
+        print("function application:\(function), \(arguments)")
+        return apply(function: function, arguments: arguments, env: env)
+      }
     }
     
     return nil
   }
   
-  private func isPrimitive(_ expr: Expr) -> Bool {
+  static func getFunctionBody(_ exprs: [Expr], env: Environment) -> Expr? {
+    guard let first = exprs.first else {
+      return nil
+    }
+    switch first {
+    case let .atom(name):
+      return env.lookup(name)
+    default:
+      return nil
+    }
+  }
+  
+  static func getArguments(_ exprs: [Expr], env: Environment) -> [Expr]? {
+    return sequenceArray(Array(exprs.dropFirst()).map { $0.eval(env) })
+  }
+  
+  static func apply(function: Expr, arguments: [Expr], env: Environment) -> Expr? {
+    if case let .native(f) = function {
+      // call native function
+      let argArray: [Any] = arguments
+      return f(argArray)
+    } else {
+      // lambda or lisp function application
+      guard let argNames = function.getArgNames() else {
+        return nil
+      }
+      
+      let newFrame: [String:Expr] = Dictionary<String, Expr>(uniqueKeysWithValues: zip(argNames, arguments))
+      let functionBody = function.getBody()
+      let newEnv = env.pushFrame(newFrame)
+      
+      return functionBody?.eval(newEnv)
+    }
+  }
+  
+  func getBody() -> Expr? {
+    guard isLambda,
+          case let .list(xs) = self,
+          xs.count == 3,
+          case let .list(body) = xs[2]
+    else {
+      return nil
+    }
+    
+    return .list(body)
+  }
+  
+  func getArgNames() -> [String]? {
+    guard isLambda,
+          case let .list(xs) = self,
+          xs.count == 3,
+          case let .list(argList) = xs[1]
+    else {
+      return nil
+    }
+    
+    return sequenceArray(argList.map {
+      guard case let .atom(s) = $0 else {
+        return nil
+      }
+      return s
+    })
+  }
+
+  private var isPrimitive: Bool {
     let primitives = [
       "quote",
       "atom",
@@ -44,15 +121,32 @@ extension Expr: Evaluatable {
       "cond"
     ]
     
-    switch expr {
-    case let .atom(x):
-      return primitives.contains(x)
+    switch self {
+    case let .atom(name):
+      return primitives.contains(name)
     default:
       return false
     }
   }
-  
-  private func evalPrimitive(_ exprs: [Expr], _ env: Environment) -> Expr? {
+
+  private var isLambda: Bool {
+    switch self {
+    case let .list(exprs):
+      guard let first = exprs.first else {
+        return false
+      }
+      switch first {
+      case .atom("lambda"):
+        return exprs.count > 1
+      default:
+        return false
+      }
+    default:
+      return false
+    }
+  }
+    
+  static private func evalPrimitive(_ exprs: [Expr], _ env: Environment) -> Expr? {
     guard let first = exprs.first else {
       return Expr.list([])
     }
@@ -77,14 +171,14 @@ extension Expr: Evaluatable {
     }
   }
   
-  private func evalQuote(_ exprs: [Expr], env: Environment) -> Expr? {
+  static private func evalQuote(_ exprs: [Expr], env: Environment) -> Expr? {
     guard exprs.count == 2 else {
       return nil
     }
     return exprs[safeIndex: 1]
   }
   
-  private func evalAtomP(_ exprs: [Expr], env: Environment) -> Expr? {
+  static private func evalAtomP(_ exprs: [Expr], env: Environment) -> Expr? {
     guard exprs.count == 2 else {
       return nil
     }
@@ -96,14 +190,14 @@ extension Expr: Evaluatable {
     }
   }
 
-  private func evalEq(_ exprs: [Expr], env: Environment) -> Expr? {
+  static private func evalEq(_ exprs: [Expr], env: Environment) -> Expr? {
     guard exprs.count == 3 else {
       return nil
     }
-    return exprs[1] == exprs[2] ? .atom("t") : .list([])
+    return exprs[1].eval(env) == exprs[2].eval(env) ? .atom("t") : .list([])
   }
   
-  private func evalCar(_ exprs: [Expr], env: Environment) -> Expr? {
+  static private func evalCar(_ exprs: [Expr], env: Environment) -> Expr? {
     guard exprs.count == 2 else {
       return nil
     }
@@ -121,7 +215,7 @@ extension Expr: Evaluatable {
     }
   }
   
-  private func evalCdr(_ exprs: [Expr], env: Environment) -> Expr? {
+  static private func evalCdr(_ exprs: [Expr], env: Environment) -> Expr? {
     guard exprs.count == 2 else {
       return nil
     }
@@ -138,7 +232,7 @@ extension Expr: Evaluatable {
     }
   }
   
-  private func evalCons(_ exprs: [Expr], env: Environment) -> Expr? {
+  static private func evalCons(_ exprs: [Expr], env: Environment) -> Expr? {
     guard exprs.count == 3 else {
       return nil
     }
@@ -158,7 +252,7 @@ extension Expr: Evaluatable {
     }
   }
   
-  private func evalCond(_ exprs: [Expr], env: Environment) -> Expr? {
+  static private func evalCond(_ exprs: [Expr], env: Environment) -> Expr? {
     guard exprs.count > 1 else {
       return nil
     }
@@ -187,4 +281,11 @@ extension Array {
   public subscript(safeIndex i: Int) -> Element? {
     return i >= 0 && i < self.count ? self[i] : nil
   }
+}
+
+func sequenceArray<T>(_ xs: [T?]) -> [T]? {
+  if xs.contains(where: { $0 == nil }) {
+    return nil
+  }
+  return xs.map { $0! }
 }

@@ -43,6 +43,12 @@ extension Expr : Parsable {
       return nil
     default:
       let element = workingTokens.removeFirst()
+      if let int = Int(element) {
+        return (.int(int), workingTokens)
+      }
+      if let float = Double(element) {
+        return (.float(float), workingTokens)
+      }
       return (.atom(element), workingTokens)
     }
   }
