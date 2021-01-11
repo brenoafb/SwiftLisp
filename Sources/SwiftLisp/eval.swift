@@ -30,17 +30,22 @@ extension Expr: Evaluatable {
     
     if exprs[0].isPrimitive {
       return evalPrimitive(exprs, env)
+    } else if Expr.list(exprs).isLambda {
+      // a lambda evaluates to itself
+      return .list(exprs)
     } else if exprs[0].isLambda {
+      // lambda application
       let function = exprs[0]
       if let arguments = getArguments(exprs, env: env) {
-        print("lambda application:\(function), \(arguments)")
+        // print("lambda application:\(function), \(arguments)")
         return apply(function: function, arguments: arguments, env: env)
       }
     } else {
+      // function application
       if let function = getFunctionBody(exprs, env: env),
          let arguments = getArguments(exprs, env: env)
       {
-        print("function application:\(function), \(arguments)")
+        // print("function application:\(function), \(arguments)")
         return apply(function: function, arguments: arguments, env: env)
       }
     }
@@ -126,6 +131,7 @@ extension Expr: Evaluatable {
       "cdr",
       "cons",
       "cond",
+      "list",
       "define"
     ]
     
@@ -175,6 +181,8 @@ extension Expr: Evaluatable {
       return evalCons(args, env: env)
     case .atom("cond"):
       return evalCond(args, env: env)
+    case .atom("list"):
+      return evalListP(args, env: env)
     case .atom("define"):
       evalDefine(args, env: env)
       return .list([])
@@ -272,7 +280,7 @@ extension Expr: Evaluatable {
         case nil:
           return nil
         case .atom("t"):
-          return xs[1]
+          return xs[1].eval(env)
         default:
           break
         }
@@ -281,6 +289,14 @@ extension Expr: Evaluatable {
       }
     }
     return .list([])
+  }
+  
+  static private func evalListP(_ args: [Expr], env: Environment) -> Expr? {
+    guard let x = sequenceArray(args.map { $0.eval(env) }) else {
+      return nil
+    }
+    
+    return .list(x)
   }
   
   static private func evalDefine(_ args: [Expr], env: Environment) {

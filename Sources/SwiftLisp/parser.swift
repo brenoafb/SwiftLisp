@@ -1,19 +1,41 @@
 import Foundation
 
-protocol Parsable {
-  init?(parse text: String)
-}
+//extension Expr : Parsable {
+//  init?(parse text: String) {
+//    self = .nilexpr
+//    let tokens = Expr.tokenize(text)
+//    guard let (elements, _) = Expr.next(tokens) else {
+//      return nil
+//    }
+//    self = elements
+//  }
+//
+//  init?(parse text: String, remaining: inout [String]) {
+//    self = .nilexpr
+//    let tokens = Expr.tokenize(text)
+//    guard let (elements, rem) = Expr.next(tokens) else {
+//      return nil
+//    }
+//    self = elements
+//    remaining = rem
+//  }
+//}
 
-extension Expr : Parsable {
-  init?(parse text: String) {
-    self = .nilexpr
-    let tokens = Expr.tokenize(text)
-    guard let (elements, _) = Expr.next(tokens) else {
-      return nil
+struct Parser {
+  
+  static func parse(_ input: String) -> [Expr]? {
+    var tokens = Parser.tokenize(input.replacingOccurrences(of: "\n", with: " "))
+    var exprs: [Expr] = []
+    while !tokens.isEmpty {
+      guard let (expr, remaining) = Parser.next(tokens) else {
+        return nil
+      }
+      tokens = remaining
+      exprs.append(expr)
     }
-    self = elements
+    return exprs
   }
-
+  
   static func tokenize(_ s: String) -> [String] {
     return s.replacingOccurrences(of: "(", with: " ( ")
       .replacingOccurrences(of: ")", with: " ) ")
