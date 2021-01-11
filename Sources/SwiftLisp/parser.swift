@@ -7,26 +7,28 @@ protocol Parsable {
 extension Expr : Parsable {
   init?(parse text: String) {
     self = .nilexpr
-    let tokens = tokenize(text)
-    guard let (elements, _) = next(tokens) else {
+    let tokens = Expr.tokenize(text)
+    guard let (elements, _) = Expr.next(tokens) else {
       return nil
     }
     self = elements
   }
 
-  private func tokenize(_ s: String) -> [String] {
+  static func tokenize(_ s: String) -> [String] {
     return s.replacingOccurrences(of: "(", with: " ( ")
       .replacingOccurrences(of: ")", with: " ) ")
+      .replacingOccurrences(of: "'", with: " ' ")
       .split(separator: " ").map { String($0) }
   }
 
-  private func next(_ tokens: [String]) -> (Expr, [String])? {
+  static func next(_ tokens: [String]) -> (Expr, [String])? {
     if tokens.isEmpty {
       return (.list([]), tokens)
     }
 
     var workingTokens = tokens
     switch workingTokens[0] {
+    
     case "(":
       workingTokens.removeFirst()
       var elements: [Expr] = []
@@ -39,8 +41,18 @@ extension Expr : Parsable {
       }
       workingTokens.removeFirst()
       return (.list(elements), workingTokens)
+      
     case ")":
       return nil
+      
+    case "'":
+      // quote
+      workingTokens.removeFirst()
+      guard let (element, remainingTokens) = next(workingTokens) else {
+        return nil
+      }
+      return (.quote(element), remainingTokens)
+      
     default:
       let element = workingTokens.removeFirst()
       if let int = Int(element) {

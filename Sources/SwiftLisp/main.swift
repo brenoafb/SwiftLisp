@@ -50,6 +50,7 @@ func repl() {
   print(">", separator: "", terminator: " ")
   let input = readInput()
   if let expression = Expr(parse: input) {
+    print("\(expression)")
     if let result = expression.eval(env) {
       print("> \(result)")
     } else {

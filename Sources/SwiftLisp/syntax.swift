@@ -2,11 +2,12 @@ import Foundation
 
 typealias NativeFunction = ([Any]) -> Expr?
 
-enum Expr {
+indirect enum Expr {
   case atom(String)
   case int(Int)
   case float(Double)
   case list([Expr])
+  case quote(Expr)
   case native(NativeFunction)
   case nilexpr
 }
@@ -31,6 +32,8 @@ extension Expr : CustomStringConvertible {
       return "[\(s)]"
     case .native:
       return "<native function>"
+    case let .quote(x):
+      return "'\(x.description)"
     case .nilexpr:
       return "NIL"
     }
@@ -62,6 +65,10 @@ extension Expr : Equatable {
         return true
       } else {
         return false
+      }
+    case let .quote(x):
+      if case let .quote(y) = rhs {
+        return x == y
       }
     case .native:
       return false

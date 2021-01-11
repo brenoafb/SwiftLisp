@@ -16,6 +16,8 @@ extension Expr: Evaluatable {
       return .int(x)
     case let .float(x):
       return .float(x)
+    case let .quote(x):
+      return x
     default:
       return .list([])
     }
