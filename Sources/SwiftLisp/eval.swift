@@ -157,41 +157,44 @@ extension Expr: Evaluatable {
       return Expr.list([])
     }
     
+    let args = Array(exprs.dropFirst())
     switch first {
     case .atom("quote"):
-      return evalQuote(exprs, env: env)
+      return evalQuote(args, env: env)
     case .atom("atom"):
-      return evalAtomP(exprs, env: env)
+      return evalAtomP(args, env: env)
     case .atom("eq"):
-      return evalEq(exprs, env: env)
+      return evalEq(args, env: env)
     case .atom("car"):
-      return evalCar(exprs, env: env)
+      return evalCar(args, env: env)
     case .atom("cdr"):
-      return evalCdr(exprs, env: env)
+      return evalCdr(args, env: env)
     case .atom("cons"):
-      return evalCons(exprs, env: env)
+      return evalCons(args, env: env)
     case .atom("cond"):
-      return evalCond(exprs, env: env)
+      return evalCond(args, env: env)
     case .atom("define"):
-      evalDefine(exprs, env: env)
+      evalDefine(args, env: env)
       return .list([])
     default:
       return nil
     }
   }
   
-  static private func evalQuote(_ exprs: [Expr], env: Environment) -> Expr? {
-    guard exprs.count == 2 else {
+  static private func evalQuote(_ args: [Expr], env: Environment) -> Expr? {
+    guard args.count == 1 else {
       return nil
     }
-    return exprs[safeIndex: 1]
+    return args[0]
   }
   
-  static private func evalAtomP(_ exprs: [Expr], env: Environment) -> Expr? {
-    guard exprs.count == 2 else {
+  static private func evalAtomP(_ args: [Expr], env: Environment) -> Expr? {
+    guard args.count == 1 else {
       return nil
     }
-    switch exprs[1] {
+    switch args[0].eval(env) {
+    case nil:
+      return nil
     case .atom:
       return .atom("t")
     default:
@@ -199,74 +202,67 @@ extension Expr: Evaluatable {
     }
   }
 
-  static private func evalEq(_ exprs: [Expr], env: Environment) -> Expr? {
-    guard exprs.count == 3 else {
+  static private func evalEq(_ args: [Expr], env: Environment) -> Expr? {
+    guard args.count == 2 else {
       return nil
     }
-    return exprs[1].eval(env) == exprs[2].eval(env) ? .atom("t") : .list([])
-  }
   
-  static private func evalCar(_ exprs: [Expr], env: Environment) -> Expr? {
-    guard exprs.count == 2 else {
-      return nil
-    }
-    switch exprs[1] {
-    case .list:
-      switch exprs[1].eval(env) {
-      case let .list(xs):
-        return xs[0]
-      default:
-        return nil
-      }
-      
-    default:
-      return nil
-    }
-  }
-  
-  static private func evalCdr(_ exprs: [Expr], env: Environment) -> Expr? {
-    guard exprs.count == 2 else {
-      return nil
-    }
-    switch exprs[1] {
-    case .list:
-      switch exprs[1].eval(env) {
-      case let .list(xs):
-        return .list(Array(xs.dropFirst()))
-      default:
-        return nil
-      }
-    default:
-      return nil
-    }
-  }
-  
-  static private func evalCons(_ exprs: [Expr], env: Environment) -> Expr? {
-    guard exprs.count == 3 else {
+    guard let arg0 = args[0].eval(env),
+          let arg1 = args[1].eval(env) else {
       return nil
     }
     
-    guard let x = exprs[1].eval(env) else {
+    return arg0 == arg1 ? .atom("t") : .list([])
+  }
+  
+  static private func evalCar(_ args: [Expr], env: Environment) -> Expr? {
+    guard args.count == 1 else {
       return nil
     }
-    print("exprs[2]: \(exprs[2])")
-    switch exprs[2].eval(env) {
+    switch args[0].eval(env) {
     case let .list(xs):
-      print(xs)
-      var xxs = [x]
-      xxs.append(contentsOf: xs)
-      return .list(xxs)
+      return xs.first
     default:
       return nil
     }
   }
   
-  static private func evalCond(_ exprs: [Expr], env: Environment) -> Expr? {
-    guard exprs.count > 1 else {
+  static private func evalCdr(_ args: [Expr], env: Environment) -> Expr? {
+    guard args.count == 1 else {
+      return nil
+    }
+    switch args[0].eval(env) {
+    case let .list(xs):
+      switch xs.count {
+      case 0:
+        return nil
+      default:
+        return .list(Array(xs.dropFirst()))
+      }
+    default:
+      return nil
+    }
+  }
+  
+  static private func evalCons(_ args: [Expr], env: Environment) -> Expr? {
+    guard args.count == 2 else {
       return nil
     }
     
-    for comp in exprs[1...] {
+    guard let x = args[0].eval(env),
+          case let .list(xs) = args[1].eval(env) else {
+      return nil
+    }
+    
+    return .list([x] + xs)
+  }
+  
+  static private func evalCond(_ args: [Expr], env: Environment) -> Expr? {
+    guard args.count > 0 else {
+      return nil
+    }
+    
+    for comp in args {
       switch comp {
       case let .list(xs):
         guard xs.count == 2 else { return nil }
@@ -285,16 +281,16 @@ extension Expr: Evaluatable {
     return .list([])
   }
   
-  static private func evalDefine(_ exprs: [Expr], env: Environment) {
-    guard exprs.count == 3 else {
+  static private func evalDefine(_ args: [Expr], env: Environment) {
+    guard args.count == 2 else {
       return
     }
     
-    guard case let .atom(key) = exprs[1] else {
+    guard case let .atom(key) = args[0] else {
       return
     }
     
-    let expr = exprs[2]
+    let expr = args[1]
     if expr.isLambda {
       env.addBinding(key: key, value: expr)
       return
