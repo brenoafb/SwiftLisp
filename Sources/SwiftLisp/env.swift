@@ -49,7 +49,30 @@ var defaultEnvironment = Environment([[
   "*": .native(binaryIntOperation({ $0 * $1 })),
   "-": .native(binaryIntOperation({ $0 - $1 })),
   "/": .native(binaryIntOperation({ $0 / $1 })),
+  "<": .native(binaryIntComparison({ $0 < $1 })),
+  ">": .native(binaryIntComparison({ $0 > $1 })),
+  ">=": .native(binaryIntComparison({ $0 >= $1 })),
+  "<=": .native(binaryIntComparison({ $0 <= $1 })),
+  "!=": .native(binaryIntComparison({ $0 != $1 })),
 ]])
+
+func binaryIntComparison(_ comp: @escaping (Int, Int) -> Bool) -> NativeFunction {
+  let function: NativeFunction = { [f = comp] (args) -> Expr? in
+    guard args.count == 2 else {
+      return nil
+    }
+      
+    if case let .int(x) = args[0] as? Expr {
+      if case let .int(y) = args[1] as? Expr {
+        return f(x, y) ? .atom("t") : .list([])
+      }
+    }
+    
+    return nil
+  }
+  
+  return function
+}
 
 func binaryIntOperation(_ binop: @escaping (Int, Int) -> Int) -> NativeFunction {
   let function: NativeFunction = { [f = binop] (args) -> Expr? in
