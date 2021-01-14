@@ -1,28 +1,7 @@
 import Foundation
 
-//extension Expr : Parsable {
-//  init?(parse text: String) {
-//    self = .nilexpr
-//    let tokens = Expr.tokenize(text)
-//    guard let (elements, _) = Expr.next(tokens) else {
-//      return nil
-//    }
-//    self = elements
-//  }
-//
-//  init?(parse text: String, remaining: inout [String]) {
-//    self = .nilexpr
-//    let tokens = Expr.tokenize(text)
-//    guard let (elements, rem) = Expr.next(tokens) else {
-//      return nil
-//    }
-//    self = elements
-//    remaining = rem
-//  }
-//}
-
 struct Parser {
-  
+
   static func parse(_ input: String) -> [Expr]? {
     var tokens = Parser.tokenize(input.replacingOccurrences(of: "\n", with: " "))
     var exprs: [Expr] = []
@@ -35,7 +14,7 @@ struct Parser {
     }
     return exprs
   }
-  
+
   static func tokenize(_ s: String) -> [String] {
     return s.replacingOccurrences(of: "(", with: " ( ")
       .replacingOccurrences(of: ")", with: " ) ")
@@ -50,7 +29,7 @@ struct Parser {
 
     var workingTokens = tokens
     switch workingTokens[0] {
-    
+
     case "(":
       workingTokens.removeFirst()
       var elements: [Expr] = []
@@ -63,10 +42,10 @@ struct Parser {
       }
       workingTokens.removeFirst()
       return (.list(elements), workingTokens)
-      
+
     case ")":
       return nil
-      
+
     case "'":
       // quote
       workingTokens.removeFirst()
@@ -74,7 +53,7 @@ struct Parser {
         return nil
       }
       return (.quote(element), remainingTokens)
-      
+
     default:
       let element = workingTokens.removeFirst()
       if let int = Int(element) {
