@@ -1,3 +1,93 @@
+(define +
+  (lambda (x y)
+    (cond ((and (eq (type x) 'float)
+                (eq (type y) 'float))
+           (+.f x y))
+          ((and (eq (type x) 'int)
+                (eq (type y) 'int))
+           (+.i x y))
+          ('t '()))))
+
+(define *
+  (lambda (x y)
+    (cond ((and (eq (type x) 'float)
+                (eq (type y) 'float))
+           (*.f x y))
+          ((and (eq (type x) 'int)
+                (eq (type y) 'int))
+           (*.i x y))
+          ('t '()))))
+
+(define -
+  (lambda (x y)
+    (cond ((and (eq (type x) 'float)
+                (eq (type y) 'float))
+           (-.f x y))
+          ((and (eq (type x) 'int)
+                (eq (type y) 'int))
+           (-.i x y))
+          ('t '()))))
+
+(define /
+  (lambda (x y)
+    (cond ((and (eq (type x) 'float)
+                (eq (type y) 'float))
+           (/.f x y))
+          ((and (eq (type x) 'int)
+                (eq (type y) 'int))
+           (/.i x y))
+          ('t '()))))
+
+(define >
+  (lambda (x y)
+    (cond ((and (eq (type x) 'float)
+                (eq (type y) 'float))
+           (>.f x y))
+          ((and (eq (type x) 'int)
+                (eq (type y) 'int))
+           (>.i x y))
+          ('t '()))))
+
+(define >=
+  (lambda (x y)
+    (cond ((and (eq (type x) 'float)
+                (eq (type y) 'float))
+           (>=.f x y))
+          ((and (eq (type x) 'int)
+                (eq (type y) 'int))
+           (>=.i x y))
+          ('t '()))))
+
+(define <
+  (lambda (x y)
+    (cond ((and (eq (type x) 'float)
+                (eq (type y) 'float))
+           (<.f x y))
+          ((and (eq (type x) 'int)
+                (eq (type y) 'int))
+           (<.i x y))
+          ('t '()))))
+
+(define <=
+  (lambda (x y)
+    (cond ((and (eq (type x) 'float)
+                (eq (type y) 'float))
+           (<=.f x y))
+          ((and (eq (type x) 'int)
+                (eq (type y) 'int))
+           (<=.i x y))
+          ('t '()))))
+
+(define !=
+  (lambda (x y)
+    (cond ((and (eq (type x) 'float)
+                (eq (type y) 'float))
+           (!=.f x y))
+          ((and (eq (type x) 'int)
+                (eq (type y) 'int))
+           (!=.i x y))
+          ('t '()))))
+
 (define cadr
   (lambda (x) (car (cdr x))))
 
