@@ -76,3 +76,11 @@ xs
     (fib-iter 1 0 n)))
 
 (fib 50)
+
+(type '(0 1 2 3 4))
+
+(type 'hello)
+
+(type 3.14)
+
+(type 4)

@@ -5,7 +5,7 @@ protocol Evaluatable {
 }
 
 extension Expr: Evaluatable {
-  
+
   func eval(_ env: Environment) -> Expr? {
     switch self {
     case let .list(exprs):
@@ -22,12 +22,12 @@ extension Expr: Evaluatable {
       return .list([])
     }
   }
-  
+
   static private func evalList(_ exprs: [Expr], env: Environment) -> Expr? {
     if exprs.isEmpty {
       return Expr.list([])
     }
-    
+
     if exprs[0].isPrimitive {
       return evalPrimitive(exprs, env)
     } else if Expr.list(exprs).isLambda {
@@ -49,10 +49,10 @@ extension Expr: Evaluatable {
         return apply(function: function, arguments: arguments, env: env)
       }
     }
-    
+
     return nil
   }
-  
+
   static func getFunctionBody(_ exprs: [Expr], env: Environment) -> Expr? {
     guard let first = exprs.first else {
       return nil
@@ -64,11 +64,11 @@ extension Expr: Evaluatable {
       return nil
     }
   }
-  
+
   static func getArguments(_ exprs: [Expr], env: Environment) -> [Expr]? {
     return sequenceArray(Array(exprs.dropFirst()).map { $0.eval(env) })
   }
-  
+
   static func apply(function: Expr, arguments: [Expr], env: Environment) -> Expr? {
     if case let .native(f) = function {
       // call native function
@@ -79,10 +79,10 @@ extension Expr: Evaluatable {
       guard let argNames = function.getArgNames() else {
         return nil
       }
-      
+
       let newFrame: [String:Expr] = Dictionary<String, Expr>(uniqueKeysWithValues: zip(argNames, arguments))
       let functionBody = function.getBody()
-      
+
       env.pushFrame(newFrame)
       guard let result = functionBody?.eval(env) else {
         env.popFrame()
@@ -92,7 +92,7 @@ extension Expr: Evaluatable {
       return result
     }
   }
-  
+
   func getBody() -> Expr? {
     guard isLambda,
           case let .list(xs) = self,
@@ -101,10 +101,10 @@ extension Expr: Evaluatable {
     else {
       return nil
     }
-    
+
     return .list(body)
   }
-  
+
   func getArgNames() -> [String]? {
     guard isLambda,
           case let .list(xs) = self,
@@ -113,7 +113,7 @@ extension Expr: Evaluatable {
     else {
       return nil
     }
-    
+
     return sequenceArray(argList.map {
       guard case let .atom(s) = $0 else {
         return nil
@@ -132,9 +132,10 @@ extension Expr: Evaluatable {
       "cons",
       "cond",
       "list",
-      "define"
+      "define",
+      "type"
     ]
-    
+
     switch self {
     case let .atom(name):
       return primitives.contains(name)
@@ -159,12 +160,12 @@ extension Expr: Evaluatable {
       return false
     }
   }
-    
+
   static private func evalPrimitive(_ exprs: [Expr], _ env: Environment) -> Expr? {
     guard let first = exprs.first else {
       return Expr.list([])
     }
-    
+
     let args = Array(exprs.dropFirst())
     switch first {
     case .atom("quote"):
@@ -184,20 +185,21 @@ extension Expr: Evaluatable {
     case .atom("list"):
       return evalListP(args, env: env)
     case .atom("define"):
-      evalDefine(args, env: env)
-      return .list([])
+      return evalDefine(args, env: env)
+    case .atom("type"):
+      return evalType(args, env: env)
     default:
       return nil
     }
   }
-  
+
   static private func evalQuote(_ args: [Expr], env: Environment) -> Expr? {
     guard args.count == 1 else {
       return nil
     }
     return args[0]
   }
-  
+
   static private func evalAtomP(_ args: [Expr], env: Environment) -> Expr? {
     guard args.count == 1 else {
       return nil
@@ -216,15 +218,15 @@ extension Expr: Evaluatable {
     guard args.count == 2 else {
       return nil
     }
-  
+
     guard let arg0 = args[0].eval(env),
           let arg1 = args[1].eval(env) else {
       return nil
     }
-    
+
     return arg0 == arg1 ? .atom("t") : .list([])
   }
-  
+
   static private func evalCar(_ args: [Expr], env: Environment) -> Expr? {
     guard args.count == 1 else {
       return nil
@@ -236,7 +238,7 @@ extension Expr: Evaluatable {
       return nil
     }
   }
-  
+
   static private func evalCdr(_ args: [Expr], env: Environment) -> Expr? {
     guard args.count == 1 else {
       return nil
@@ -253,25 +255,25 @@ extension Expr: Evaluatable {
       return nil
     }
   }
-  
+
   static private func evalCons(_ args: [Expr], env: Environment) -> Expr? {
     guard args.count == 2 else {
       return nil
     }
-    
+
     guard let x = args[0].eval(env),
           case let .list(xs) = args[1].eval(env) else {
       return nil
     }
-    
+
     return .list([x] + xs)
   }
-  
+
   static private func evalCond(_ args: [Expr], env: Environment) -> Expr? {
     guard args.count > 0 else {
       return nil
     }
-    
+
     for comp in args {
       switch comp {
       case let .list(xs):
@@ -290,37 +292,67 @@ extension Expr: Evaluatable {
     }
     return .list([])
   }
-  
+
   static private func evalListP(_ args: [Expr], env: Environment) -> Expr? {
     guard let x = sequenceArray(args.map { $0.eval(env) }) else {
       return nil
     }
-    
+
     return .list(x)
   }
-  
-  static private func evalDefine(_ args: [Expr], env: Environment) {
+
+  static private func evalDefine(_ args: [Expr], env: Environment) -> Expr? {
     guard args.count == 2 else {
-      return
+      return nil
     }
-    
+
     guard case let .atom(key) = args[0] else {
-      return
+      return nil
     }
-    
+
     let expr = args[1]
     if expr.isLambda {
       env.addBinding(key: key, value: expr)
-      return
+      return .atom("t")
     }
-    
+
     guard let value = expr.eval(env) else {
-      return
+      return .list([])
     }
-    
+
     env.addBinding(key: key, value: value)
+
+    return .atom("t")
+  }
+
+  static private func evalType(_ args: [Expr], env: Environment) -> Expr? {
+    guard args.count == 1 else {
+      return nil
+    }
+
+    guard let value = args[0].eval(env) else {
+      return .list([])
+    }
+
+    switch value {
+    case .atom:
+      return .atom("atom")
+    case .int:
+      return .atom("int")
+    case .float:
+      return .atom("float")
+    case .list:
+      return .atom("list")
+    case .quote:
+      return .atom("quote")
+    case .native:
+      return .atom("native")
+    default:
+      return .list([])
+    }
   }
 }
+
 
 extension Array {
   public subscript(safeIndex i: Int) -> Element? {
