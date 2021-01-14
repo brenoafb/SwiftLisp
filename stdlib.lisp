@@ -1,93 +1,3 @@
-(define +
-  (lambda (x y)
-    (cond ((and (eq (type x) 'float)
-                (eq (type y) 'float))
-           (+.f x y))
-          ((and (eq (type x) 'int)
-                (eq (type y) 'int))
-           (+.i x y))
-          ('t '()))))
-
-(define *
-  (lambda (x y)
-    (cond ((and (eq (type x) 'float)
-                (eq (type y) 'float))
-           (*.f x y))
-          ((and (eq (type x) 'int)
-                (eq (type y) 'int))
-           (*.i x y))
-          ('t '()))))
-
-(define -
-  (lambda (x y)
-    (cond ((and (eq (type x) 'float)
-                (eq (type y) 'float))
-           (-.f x y))
-          ((and (eq (type x) 'int)
-                (eq (type y) 'int))
-           (-.i x y))
-          ('t '()))))
-
-(define /
-  (lambda (x y)
-    (cond ((and (eq (type x) 'float)
-                (eq (type y) 'float))
-           (/.f x y))
-          ((and (eq (type x) 'int)
-                (eq (type y) 'int))
-           (/.i x y))
-          ('t '()))))
-
-(define >
-  (lambda (x y)
-    (cond ((and (eq (type x) 'float)
-                (eq (type y) 'float))
-           (>.f x y))
-          ((and (eq (type x) 'int)
-                (eq (type y) 'int))
-           (>.i x y))
-          ('t '()))))
-
-(define >=
-  (lambda (x y)
-    (cond ((and (eq (type x) 'float)
-                (eq (type y) 'float))
-           (>=.f x y))
-          ((and (eq (type x) 'int)
-                (eq (type y) 'int))
-           (>=.i x y))
-          ('t '()))))
-
-(define <
-  (lambda (x y)
-    (cond ((and (eq (type x) 'float)
-                (eq (type y) 'float))
-           (<.f x y))
-          ((and (eq (type x) 'int)
-                (eq (type y) 'int))
-           (<.i x y))
-          ('t '()))))
-
-(define <=
-  (lambda (x y)
-    (cond ((and (eq (type x) 'float)
-                (eq (type y) 'float))
-           (<=.f x y))
-          ((and (eq (type x) 'int)
-                (eq (type y) 'int))
-           (<=.i x y))
-          ('t '()))))
-
-(define !=
-  (lambda (x y)
-    (cond ((and (eq (type x) 'float)
-                (eq (type y) 'float))
-           (!=.f x y))
-          ((and (eq (type x) 'int)
-                (eq (type y) 'int))
-           (!=.i x y))
-          ('t '()))))
-
 (define cadr
   (lambda (x) (car (cdr x))))
 
@@ -110,6 +20,12 @@
     (cond (x (cond (y 't)))
           ('t '()))))
 
+(define or
+  (lambda (x y)
+    (cond (x 't)
+          (y 't)
+          ('t '()))))
+
 (define not
   (lambda (x)
     (cond (x '())
@@ -120,12 +36,20 @@
     (cond ((null x) y)
           ('t (cons (car x) (append (cdr x) y))))))
 
-(define pair
+(define zip
   (lambda (x y)
     (cond ((and (null x) (null y)) '())
           ((and (not (atom x)) (not (atom y)))
            (cons (list (car x) (car y))
-                 (pair (cdr x) (cdr y)))))))
+                 (zip (cdr x) (cdr y)))))))
+
+(define fst
+  (lambda (pair)
+    (car pair)))
+
+(define snd
+  (lambda (pair)
+    (car (cdr pair))))
 
 (define assoc
   (lambda (x y)
@@ -176,3 +100,23 @@
 (define product
   (lambda (xs)
     (foldr * 1 xs)))
+
+(define replace
+  (lambda (pairs xs)
+    (foldr
+      (lambda (x acc)
+        (cond ((eq (type x) 'list)
+               (cons (replace pairs x) acc))
+              ('t
+               (cond ((elem x (map fst pairs))
+                      (cons (assoc x pairs) acc))
+                     ('t (cons x acc))))))
+      '()
+      xs)))
+
+(define elem
+  (lambda (x xs)
+    (foldr (lambda (e acc)
+             (or acc (eq e x)))
+           '()
+           xs)))

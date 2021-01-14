@@ -1,8 +1,8 @@
-(define replace
-  (lambda (q x)
-    (cond ((null q) '())
-          ((eq (car q) '__R__)
-           (cons x (replace q x)))
-          ('t (cons (car q) (replace q x))))))
+(define str '(a this is b cool c))
 
-(replace '(hello my name is _R_) 'breno)
+(elem 'this str)
+
+(elem 'no str)
+
+
+(replace '((im youre) (out in)) '(im going out))
