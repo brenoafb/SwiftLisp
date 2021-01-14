@@ -132,8 +132,9 @@ extension Expr: Evaluatable {
       "cons",
       "cond",
       "list",
-      "define",
-      "type"
+      "type",
+      "seq",
+      "define"
     ]
 
     switch self {
@@ -188,6 +189,8 @@ extension Expr: Evaluatable {
       return evalDefine(args, env: env)
     case .atom("type"):
       return evalType(args, env: env)
+    case .atom("seq"):
+      return evalSeq(args, env: env)
     default:
       return nil
     }
@@ -350,6 +353,18 @@ extension Expr: Evaluatable {
     default:
       return .list([])
     }
+  }
+
+  static private func evalSeq(_ args: [Expr], env: Environment) -> Expr? {
+    guard args.count > 0 else {
+      return .list([])
+    }
+
+    guard let results = sequenceArray(Array(args).map { $0.eval(env) }) else {
+      return nil
+    }
+
+    return results.last
   }
 }
 
