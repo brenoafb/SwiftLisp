@@ -50,3 +50,29 @@
 (define listoflists '((0) () (1 2) (3) (4 5) (6)))
 
 (concat listoflists)
+
+(define xs (range 0 5))
+
+(sum xs)
+
+(define xs (range 0 10))
+
+(sum xs)
+
+(define xs (cdr xs))
+
+xs
+
+(product xs)
+
+(define fib-iter
+  (lambda (a b n)
+    (cond ((eq n 0) b)
+          ('t
+           (fib-iter (+ a b) a (- n 1))))))
+
+(define fib
+  (lambda (n)
+    (fib-iter 1 0 n)))
+
+(fib 50)

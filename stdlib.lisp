@@ -66,3 +66,23 @@
     (cond ((null xs) '())
           ('t (cons (f (car xs))
                     (map f (cdr xs)))))))
+
+(define foldr
+  (lambda (f x0 xs)
+    (cond ((null xs) x0)
+          ('t
+            (f (car xs) (foldr f x0 (cdr xs)))))))
+
+(define range
+  (lambda (x0 x1)
+    (cond ((> x0 x1) '())
+          ('t
+           (cons x0 (range (+ x0 1) x1))))))
+
+(define sum
+  (lambda (xs)
+    (foldr + 0 xs)))
+
+(define product
+  (lambda (xs)
+    (foldr * 1 xs)))
