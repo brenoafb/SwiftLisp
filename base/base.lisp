@@ -49,24 +49,12 @@
 
 (define snd
   (lambda (pair)
-    (car (cdr pair))))
+    (cadr pair)))
 
 (define assoc
   (lambda (x y)
     (cond ((eq (caar y) x) (cadar y))
           ('t (assoc x (cdr y))))))
-
-(define length
-  (lambda (xs)
-    (cond ((null xs) 0)
-          ('t (+ 1 (length (cdr xs)))))))
-
-(define any
-  (lambda (p xs)
-    (cond ((null xs) '())
-          ((p (car xs)) 't)
-          ('t (any p (cdr xs))))))
-
 
 (define filter
   (lambda (p xs)
@@ -86,20 +74,6 @@
     (cond ((null xs) x0)
           ('t
             (f (car xs) (foldr f x0 (cdr xs)))))))
-
-(define range
-  (lambda (x0 x1)
-    (cond ((> x0 x1) '())
-          ('t
-           (cons x0 (range (+ x0 1) x1))))))
-
-(define sum
-  (lambda (xs)
-    (foldr + 0 xs)))
-
-(define product
-  (lambda (xs)
-    (foldr * 1 xs)))
 
 (define replace
   (lambda (pairs xs)

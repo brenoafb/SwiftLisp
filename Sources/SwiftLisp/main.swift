@@ -1,10 +1,21 @@
 import Foundation
 
-var env = defaultEnvironment
+if let env = loadBaseFiles() {
+  if CommandLine.argc > 1 {
+    for argument in CommandLine.arguments[1...] {
+      let _ = execFile(filename: argument, env: env, options: [.printParse, .printResult])
+    }
+  }
+}
 
-enum InputValidation {
-  case valid
-  case incomplete
+enum ExecOptions {
+  case printParse
+  case printResult
+}
+
+enum ParenState {
+  case closed
+  case open
   case invalid
 }
 
@@ -16,7 +27,21 @@ func readInput() -> String {
   return input
 }
 
-func execFile(filename: String, env: Environment) -> Bool {
+func loadBaseFiles(baseDir: String = "./base") -> Environment? {
+  let baseFiles = ["base.lisp", "stdlib.lisp", "arithmetic.lisp"]
+                  .map { "\(baseDir)/\($0)" }
+  let env = defaultEnvironment
+  for file in baseFiles {
+    guard execFile(filename: file, env: env, options: []) else {
+      return nil
+    }
+  }
+  return env
+}
+
+func execFile(filename: String,
+              env: Environment,
+              options: [ExecOptions] = [.printResult]) -> Bool {
   guard let contents = try? String(contentsOfFile: filename, encoding: .utf8) else {
     print("Error reading file \(filename)")
     return false
@@ -28,20 +53,18 @@ func execFile(filename: String, env: Environment) -> Bool {
   }
 
   for expr in exprs {
-    print(expr)
+    if (options.contains(.printParse)) {
+      print(expr)
+    }
     guard let result = expr.eval(env) else {
       print("Error evaluatng expression in file \(filename)")
       return false
     }
 
-    print(result)
+    if options.contains(.printResult) {
+      print(result)
+    }
   }
 
   return true
-}
-
-if CommandLine.argc > 1 {
-  for argument in CommandLine.arguments[1...] {
-    let _ = execFile(filename: argument, env: env)
-  }
 }

@@ -25,11 +25,17 @@
 
 (length '(1 2 3 4 5))
 
+(any even '(0))
+
 (any even '(1 2 3 4 5))
 
 (any even '(1 3 5 7))
 
-(any even '(0))
+(all even '(0))
+
+(all even (filter even '(1 2 3 4 5)))
+
+(all even (map (lambda (x) (* 2 x)) '(1 3 5 7)))
 
 (map (lambda (x) (+ x 1)) mylist)
 
