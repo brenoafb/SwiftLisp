@@ -63,7 +63,16 @@ var defaultEnvironment = Environment([[
   ">=.f": .native(binaryFloatComparison({ $0 >= $1 })),
   "<=.f": .native(binaryFloatComparison({ $0 <= $1 })),
   "!=.f": .native(binaryFloatComparison({ $0 != $1 })),
+  "print": .native(printFunc)
 ]])
+
+let printFunc: NativeFunction = { (args) -> Expr? in
+  for arg in args {
+    print(arg, terminator: " ")
+  }
+  print()
+  return .atom("t")
+}
 
 func binaryIntComparison(_ comp: @escaping (Int, Int) -> Bool) -> NativeFunction {
   let function: NativeFunction = { [f = comp] (args) -> Expr? in
