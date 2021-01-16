@@ -12,14 +12,10 @@ extension Expr: Evaluatable {
       return Expr.evalList(exprs, env: env)
     case let .atom(x):
       return env.lookup(x)
-    case let .int(x):
-      return .int(x)
-    case let .float(x):
-      return .float(x)
     case let .quote(x):
       return x
     default:
-      return .list([])
+      return self
     }
   }
 

@@ -19,6 +19,7 @@ struct Parser {
     return s.replacingOccurrences(of: "(", with: " ( ")
       .replacingOccurrences(of: ")", with: " ) ")
       .replacingOccurrences(of: "'", with: " ' ")
+      .replacingOccurrences(of: "\"", with: " \" ")
       .split(separator: " ").map { String($0) }
   }
 
@@ -53,6 +54,17 @@ struct Parser {
         return nil
       }
       return (.quote(element), remainingTokens)
+
+    case "\"":
+      // string
+      workingTokens.removeFirst()
+      var elements: [String] = []
+      while workingTokens[0] != "\"" {
+        elements.append(workingTokens.removeFirst())
+      }
+      workingTokens.removeFirst()
+      let str = elements.joined(separator: " ")
+      return (.string(str), workingTokens)
 
     default:
       let element = workingTokens.removeFirst()

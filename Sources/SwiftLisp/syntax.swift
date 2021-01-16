@@ -9,6 +9,7 @@ indirect enum Expr {
   case list([Expr])
   case quote(Expr)
   case native(NativeFunction)
+  case string(String)
   case nilexpr
 }
 
@@ -34,6 +35,8 @@ extension Expr : CustomStringConvertible {
       return "<native function>"
     case let .quote(x):
       return "'\(x.description)"
+    case let .string(x):
+      return "\"\(x)\""
     case .nilexpr:
       return "NIL"
     }
@@ -67,6 +70,10 @@ extension Expr : Equatable {
       }
     case let .quote(x):
       if case let .quote(y) = rhs {
+        return x == y
+      }
+    case let .string(x):
+      if case let .string(y) = rhs {
         return x == y
       }
     case .native:
