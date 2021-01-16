@@ -4,7 +4,7 @@
 
 json
 
-(define dict (json-to-dict json))
+(define dict (json-to-assoc-list json))
 
 dict
 
