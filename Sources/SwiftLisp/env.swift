@@ -63,14 +63,30 @@ var defaultEnvironment = Environment([[
   ">=.f": .native(binaryFloatComparison({ $0 >= $1 })),
   "<=.f": .native(binaryFloatComparison({ $0 <= $1 })),
   "!=.f": .native(binaryFloatComparison({ $0 != $1 })),
+  "println": .native(printlnFunc),
   "print": .native(printFunc)
 ]])
 
-let printFunc: NativeFunction = { (args) -> Expr? in
+let printlnFunc: NativeFunction = { (args) -> Expr? in
   for arg in args {
-    print(arg, terminator: " ")
+    if case let .string(s) = arg as? Expr {
+      print(s, terminator: "")
+    } else {
+      print(arg, terminator: "")
+    }
   }
   print()
+  return .atom("t")
+}
+
+let printFunc: NativeFunction = { (args) -> Expr? in
+  for arg in args {
+    if case let .string(s) = arg as? Expr {
+      print(s, terminator: "")
+    } else {
+      print(arg, terminator: "")
+    }
+  }
   return .atom("t")
 }
 
