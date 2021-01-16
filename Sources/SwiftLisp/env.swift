@@ -6,6 +6,7 @@
 //
 
 import Foundation
+import FoundationNetworking
 
 typealias EnvFrame = [String:Expr]
 
@@ -64,8 +65,66 @@ var defaultEnvironment = Environment([[
   "<=.f": .native(binaryFloatComparison({ $0 <= $1 })),
   "!=.f": .native(binaryFloatComparison({ $0 != $1 })),
   "println": .native(printlnFunc),
-  "print": .native(printFunc)
+  "print": .native(printFunc),
+  "request": .native(request)
 ]])
+
+let request: NativeFunction = { (args) -> Expr? in
+  guard args.count == 1 else {
+    return nil
+  }
+
+  var sem = DispatchSemaphore(value: 0)
+
+  guard case let .string(urlstr) = args.first as? Expr else {
+    return nil
+  }
+
+  guard let url = URL(string: urlstr) else {
+    return nil
+  }
+
+  print("request url: \(url)")
+
+  var error: Error? = nil
+  var result: String? = nil
+  let session = URLSession(configuration: .default)
+  let task = session.dataTask(with: url) { (d, r, e) in
+    // print("error: \(String(describing: error))")
+    // print("response: \(String(describing: response))")
+    if let e = e {
+      error = e
+      return
+    }
+
+    guard let d = d else {
+      print("Error getting data")
+      return
+    }
+
+    guard let s = String(data: d, encoding: .utf8) else {
+      print("Error converting data to string")
+      return
+    }
+
+    result = s
+
+    sem.signal()
+  }
+
+  task.resume()
+  sem.wait()
+
+  if let error = error {
+    return .list([])
+  }
+
+  if let result = result {
+    return .string(result)
+  }
+
+  return .list([])
+}
 
 let printlnFunc: NativeFunction = { (args) -> Expr? in
   for arg in args {
