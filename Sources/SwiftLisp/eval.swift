@@ -33,7 +33,6 @@ extension Expr: Evaluatable {
       // lambda application
       let function = exprs[0]
       if let arguments = getArguments(exprs, env: env) {
-        // print("lambda application:\(function), \(arguments)")
         return apply(function: function, arguments: arguments, env: env)
       }
     } else {
@@ -41,7 +40,6 @@ extension Expr: Evaluatable {
       if let function = getFunctionBody(exprs, env: env),
          let arguments = getArguments(exprs, env: env)
       {
-        // print("function application:\(function), \(arguments)")
         return apply(function: function, arguments: arguments, env: env)
       }
     }
@@ -344,6 +342,8 @@ extension Expr: Evaluatable {
       return .atom("list")
     case .quote:
       return .atom("quote")
+    case .string:
+      return .atom("string")
     case .native:
       return .atom("native")
     default:
