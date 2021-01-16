@@ -1,11 +1,5 @@
-//
-//  File.swift
-//
-//
-//  Created by Breno on 10/01/21.
-//
-
 import Foundation
+import FoundationNetworking
 
 typealias EnvFrame = [String:Expr]
 
@@ -63,7 +57,114 @@ var defaultEnvironment = Environment([[
   ">=.f": .native(binaryFloatComparison({ $0 >= $1 })),
   "<=.f": .native(binaryFloatComparison({ $0 <= $1 })),
   "!=.f": .native(binaryFloatComparison({ $0 != $1 })),
+  "println": .native(printlnFunc),
+  "print": .native(printFunc),
+  "request": .native(request),
+  "json-to-assoc-list": .native(jsonToAssocList),
 ]])
+
+let jsonToAssocList: NativeFunction = { (args) -> Expr? in
+  guard args.count == 1 else {
+    return nil
+  }
+
+  guard case let .string(json) = args.first as? Expr else {
+    return nil
+  }
+
+  let data = Data(json.utf8)
+
+  guard let dict = try? JSONSerialization.jsonObject(with: data, options: []) as? [String:Any] else {
+    print("Error converting data to dictionary")
+    return nil
+  }
+
+  guard let assocList = dictToAssocList(dict) else {
+    return nil
+  }
+
+  return assocList
+}
+
+let request: NativeFunction = { (args) -> Expr? in
+  guard args.count == 1 else {
+    return nil
+  }
+
+  var sem = DispatchSemaphore(value: 0)
+
+  guard case let .string(urlstr) = args.first as? Expr else {
+    return nil
+  }
+
+  guard let url = URL(string: urlstr) else {
+    return nil
+  }
+
+  print("request url: \(url)")
+
+  var error: Error? = nil
+  var result: String? = nil
+  let session = URLSession(configuration: .default)
+  let task = session.dataTask(with: url) { (d, r, e) in
+    // print("error: \(String(describing: error))")
+    // print("response: \(String(describing: response))")
+    if let e = e {
+      error = e
+      return
+    }
+
+    guard let d = d else {
+      print("Error getting data")
+      return
+    }
+
+    guard let s = String(data: d, encoding: .utf8) else {
+      print("Error converting data to string")
+      return
+    }
+
+    result = s
+
+    sem.signal()
+  }
+
+  task.resume()
+  sem.wait()
+
+  if let error = error {
+    return .list([])
+  }
+
+  if let result = result {
+    return .string(result)
+  }
+
+  return .list([])
+}
+
+let printlnFunc: NativeFunction = { (args) -> Expr? in
+  for arg in args {
+    if case let .string(s) = arg as? Expr {
+      print(s, terminator: "")
+    } else {
+      print(arg, terminator: "")
+    }
+  }
+  print()
+  return .atom("t")
+}
+
+let printFunc: NativeFunction = { (args) -> Expr? in
+  for arg in args {
+    if case let .string(s) = arg as? Expr {
+      print(s, terminator: "")
+    } else {
+      print(arg, terminator: "")
+    }
+  }
+  return .atom("t")
+}
 
 func binaryIntComparison(_ comp: @escaping (Int, Int) -> Bool) -> NativeFunction {
   let function: NativeFunction = { [f = comp] (args) -> Expr? in
