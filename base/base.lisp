@@ -32,9 +32,12 @@
           ('t 't))))
 
 (define append
-  (lambda (x y)
-    (cond ((null x) y)
-          ('t (cons (car x) (append (cdr x) y))))))
+  (lambda (xs ys)
+    (foldr
+      (lambda (x acc)
+        (cons x acc))
+      ys
+      xs)))
 
 (define zip
   (lambda (x y)
@@ -56,18 +59,37 @@
     (cond ((eq (caar y) x) (cadar y))
           ('t (assoc x (cdr y))))))
 
+(define assoc
+  (lambda (key dict)
+    (seq
+      (define result
+        (foldr
+          (lambda (x acc)
+            (cond ((eq (type acc) 'list) acc)
+                  ((eq key (fst x)) (list key (snd x)))
+                  ('t acc)))
+          'not-found
+          dict))
+      (cond ((eq (type result) 'atom)
+             '())
+            ('t (snd result))))))
+
 (define filter
   (lambda (p xs)
-    (cond ((null xs) '())
-          ((p (car xs)) (cons (car xs)
-                              (filter p (cdr xs))))
-          ('t (filter p (cdr xs))))))
+    (foldr
+      (lambda (x acc)
+        (cond ((p x) (cons x acc))
+              ('t acc)))
+      '()
+      xs)))
 
 (define map
   (lambda (f xs)
-    (cond ((null xs) '())
-          ('t (cons (f (car xs))
-                    (map f (cdr xs)))))))
+    (foldr
+      (lambda (x acc)
+        (cons (f x) acc))
+      '()
+      xs)))
 
 (define replace
   (lambda (pairs xs)

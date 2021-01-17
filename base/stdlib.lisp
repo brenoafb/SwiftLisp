@@ -11,7 +11,7 @@
     (foldr
       (lambda (x acc)
         (and (p x) acc))
-      '()
+      't
       xs)))
 
 (define length

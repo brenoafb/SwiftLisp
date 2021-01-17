@@ -17,6 +17,11 @@
           ((eq x 1) '())
           ('t (even (- x 2))))))
 
+(define odd
+  (lambda (x)
+    (not (even x))))
+
+
 (even 2)
 
 (even 1)
@@ -33,19 +38,7 @@
 
 (all even '(0))
 
-(all even (filter even '(1 2 3 4 5)))
-
-(all even (map (lambda (x) (* 2 x)) '(1 3 5 7)))
-
-(map (lambda (x) (+ x 1)) mylist)
-
-(filter even '(1 2 3 4 5))
-
-(define odd
-  (lambda (x)
-    (not (even x))))
-
-(append (filter even mylist) (filter odd mylist))
+(all even '(0 2 4 6))
 
 (define concat
   (lambda (xs)
@@ -90,3 +83,29 @@ xs
 (type 3.14)
 
 (type 4)
+
+(sum (range 0 100))
+(product (range 1 20))
+
+(replace '((hello goodbye) (world everyone)) '(hello world))
+
+(replace '((simple complicated) (flat nested))
+         '(this is a (really simple) (totally (flat)) structure))
+
+
+(range 0 9)
+(append (range 0 10) (range 10 20))
+
+(define dict (zip (range 0 10) (range 0 10)))
+
+(assoc 0 dict)
+(assoc 1 dict)
+(assoc 2 dict)
+(assoc 3 dict)
+(assoc 100 dict)
+
+(map (lambda (x) (+ 1 x))
+     (range 0 10))
+
+(filter even '(0 1 2 3 4))
+(filter even (range 0 10))
