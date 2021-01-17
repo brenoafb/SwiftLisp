@@ -128,6 +128,7 @@ extension Expr: Evaluatable {
       "list",
       "type",
       "seq",
+      "foldr",
       "define"
     ]
 
@@ -185,6 +186,8 @@ extension Expr: Evaluatable {
       return evalType(args, env: env)
     case .atom("seq"):
       return evalSeq(args, env: env)
+    case .atom("foldr"):
+      return evalFoldr(args, env: env)
     default:
       return nil
     }
@@ -362,8 +365,31 @@ extension Expr: Evaluatable {
 
     return results.last
   }
-}
 
+  static private func evalFoldr(_ args: [Expr], env: Environment) -> Expr? {
+    guard args.count == 3 else {
+      return .list([])
+    }
+
+    guard let function = args[0].eval(env),
+          let initialValue = args[1].eval(env),
+          case let .list(xs) = args[2].eval(env)
+          else {
+    return nil
+    }
+
+    var acc: Expr = initialValue
+
+    for x in xs.reversed() {
+      guard let result = apply(function: function, arguments: [x, acc], env: env) else {
+        return nil
+      }
+      acc = result
+    }
+
+    return acc
+  }
+}
 
 extension Array {
   public subscript(safeIndex i: Int) -> Element? {
