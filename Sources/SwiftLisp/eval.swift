@@ -116,31 +116,16 @@ extension Expr: Evaluatable {
     })
   }
 
-  private var isPrimitive: Bool {
-    let primitives = [
-      "quote",
-      "atom",
-      "eq",
-      "car",
-      "cdr",
-      "cons",
-      "cond",
-      "list",
-      "type",
-      "seq",
-      "foldr",
-      "define"
-    ]
-
+  var isPrimitive: Bool {
     switch self {
     case let .atom(name):
-      return primitives.contains(name)
+      return Array(primitives.keys).contains(name)
     default:
       return false
     }
   }
 
-  private var isLambda: Bool {
+  var isLambda: Bool {
     switch self {
     case let .list(exprs):
       guard let first = exprs.first else {
@@ -158,248 +143,17 @@ extension Expr: Evaluatable {
   }
 
   static private func evalPrimitive(_ exprs: [Expr], _ env: Environment) -> Expr? {
-    guard let first = exprs.first else {
-      return Expr.list([])
+    guard case let .atom(name) = exprs.first else {
+      return nil
+    }
+
+    guard let function = primitives[name] else {
+      return nil
     }
 
     let args = Array(exprs.dropFirst())
-    switch first {
-    case .atom("quote"):
-      return evalQuote(args, env: env)
-    case .atom("atom"):
-      return evalAtomP(args, env: env)
-    case .atom("eq"):
-      return evalEq(args, env: env)
-    case .atom("car"):
-      return evalCar(args, env: env)
-    case .atom("cdr"):
-      return evalCdr(args, env: env)
-    case .atom("cons"):
-      return evalCons(args, env: env)
-    case .atom("cond"):
-      return evalCond(args, env: env)
-    case .atom("list"):
-      return evalListP(args, env: env)
-    case .atom("define"):
-      return evalDefine(args, env: env)
-    case .atom("type"):
-      return evalType(args, env: env)
-    case .atom("seq"):
-      return evalSeq(args, env: env)
-    case .atom("foldr"):
-      return evalFoldr(args, env: env)
-    default:
-      return nil
-    }
+
+    return function(args, env)
   }
 
-  static private func evalQuote(_ args: [Expr], env: Environment) -> Expr? {
-    guard args.count == 1 else {
-      return nil
-    }
-    return args[0]
-  }
-
-  static private func evalAtomP(_ args: [Expr], env: Environment) -> Expr? {
-    guard args.count == 1 else {
-      return nil
-    }
-    switch args[0].eval(env) {
-    case nil:
-      return nil
-    case .atom:
-      return .atom("t")
-    default:
-      return .list([])
-    }
-  }
-
-  static private func evalEq(_ args: [Expr], env: Environment) -> Expr? {
-    guard args.count == 2 else {
-      return nil
-    }
-
-    guard let arg0 = args[0].eval(env),
-          let arg1 = args[1].eval(env) else {
-      return nil
-    }
-
-    return arg0 == arg1 ? .atom("t") : .list([])
-  }
-
-  static private func evalCar(_ args: [Expr], env: Environment) -> Expr? {
-    guard args.count == 1 else {
-      return nil
-    }
-    switch args[0].eval(env) {
-    case let .list(xs):
-      return xs.first
-    default:
-      return nil
-    }
-  }
-
-  static private func evalCdr(_ args: [Expr], env: Environment) -> Expr? {
-    guard args.count == 1 else {
-      return nil
-    }
-    switch args[0].eval(env) {
-    case let .list(xs):
-      switch xs.count {
-      case 0:
-        return nil
-      default:
-        return .list(Array(xs.dropFirst()))
-      }
-    default:
-      return nil
-    }
-  }
-
-  static private func evalCons(_ args: [Expr], env: Environment) -> Expr? {
-    guard args.count == 2 else {
-      return nil
-    }
-
-    guard let x = args[0].eval(env),
-          case let .list(xs) = args[1].eval(env) else {
-      return nil
-    }
-
-    return .list([x] + xs)
-  }
-
-  static private func evalCond(_ args: [Expr], env: Environment) -> Expr? {
-    guard args.count > 0 else {
-      return nil
-    }
-
-    for comp in args {
-      switch comp {
-      case let .list(xs):
-        guard xs.count == 2 else { return nil }
-        switch xs.first?.eval(env) {
-        case nil:
-          return nil
-        case .atom("t"):
-          return xs[1].eval(env)
-        default:
-          break
-        }
-      default:
-        return nil
-      }
-    }
-    return .list([])
-  }
-
-  static private func evalListP(_ args: [Expr], env: Environment) -> Expr? {
-    guard let x = sequenceArray(args.map { $0.eval(env) }) else {
-      return nil
-    }
-
-    return .list(x)
-  }
-
-  static private func evalDefine(_ args: [Expr], env: Environment) -> Expr? {
-    guard args.count == 2 else {
-      return nil
-    }
-
-    guard case let .atom(key) = args[0] else {
-      return nil
-    }
-
-    let expr = args[1]
-    if expr.isLambda {
-      env.addBinding(key: key, value: expr)
-      return .atom("t")
-    }
-
-    guard let value = expr.eval(env) else {
-      return .list([])
-    }
-
-    env.addBinding(key: key, value: value)
-
-    return .atom("t")
-  }
-
-  static private func evalType(_ args: [Expr], env: Environment) -> Expr? {
-    guard args.count == 1 else {
-      return nil
-    }
-
-    guard let value = args[0].eval(env) else {
-      return .list([])
-    }
-
-    switch value {
-    case .atom:
-      return .atom("atom")
-    case .int:
-      return .atom("int")
-    case .float:
-      return .atom("float")
-    case .list:
-      return .atom("list")
-    case .quote:
-      return .atom("quote")
-    case .string:
-      return .atom("string")
-    case .native:
-      return .atom("native")
-    default:
-      return .list([])
-    }
-  }
-
-  static private func evalSeq(_ args: [Expr], env: Environment) -> Expr? {
-    guard args.count > 0 else {
-      return .list([])
-    }
-
-    guard let results = sequenceArray(Array(args).map { $0.eval(env) }) else {
-      return nil
-    }
-
-    return results.last
-  }
-
-  static private func evalFoldr(_ args: [Expr], env: Environment) -> Expr? {
-    guard args.count == 3 else {
-      return .list([])
-    }
-
-    guard let function = args[0].eval(env),
-          let initialValue = args[1].eval(env),
-          case let .list(xs) = args[2].eval(env)
-          else {
-    return nil
-    }
-
-    var acc: Expr = initialValue
-
-    for x in xs.reversed() {
-      guard let result = apply(function: function, arguments: [x, acc], env: env) else {
-        return nil
-      }
-      acc = result
-    }
-
-    return acc
-  }
-}
-
-extension Array {
-  public subscript(safeIndex i: Int) -> Element? {
-    return i >= 0 && i < self.count ? self[i] : nil
-  }
-}
-
-func sequenceArray<T>(_ xs: [T?]) -> [T]? {
-  if xs.contains(where: { $0 == nil }) {
-    return nil
-  }
-  return xs.map { $0! }
 }
