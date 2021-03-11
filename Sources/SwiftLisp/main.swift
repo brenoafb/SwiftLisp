@@ -27,12 +27,15 @@ func readInput() -> String {
   return input
 }
 
-func loadBaseFiles(baseDir: String = "./base") -> Environment? {
-  let baseFiles = ["base.lisp", "stdlib.lisp", "arithmetic.lisp"]
-                  .map { "\(baseDir)/\($0)" }
+func loadBaseFiles(baseDir: String = "base") -> Environment? {
+  let baseFiles = ["base", "stdlib", "arithmetic"]
+                  .map {
+                    Bundle.module.url(forResource: "\(baseDir)/\($0)", withExtension: "lisp")!
+                  }
   let env = defaultEnvironment
   for file in baseFiles {
-    guard execFile(filename: file, env: env, options: []) else {
+    let filename = file.path
+    guard execFile(filename: filename, env: env, options: []) else {
       return nil
     }
   }
