@@ -1,71 +1,83 @@
 import Foundation
 
-struct Parser {
+enum ParseError: Error {
+  case unmatchedOpenParen
+  case unmatchedCloseParen
+  case unclosedString
+}
 
-  static func parse(_ input: String) -> [Expr]? {
+struct Parser {
+  
+  static private let specialSymbols: [String] = [
+    "(", ")", "'", "\""
+  ]
+  
+  static func parse(_ input: String) throws -> [Expr] {
     var tokens = Parser.tokenize(input.replacingOccurrences(of: "\n", with: " "))
     var exprs: [Expr] = []
     while !tokens.isEmpty {
-      guard let (expr, remaining) = Parser.next(tokens) else {
-        return nil
-      }
+      let (expr, remaining) = try Parser.next(tokens)
       tokens = remaining
       exprs.append(expr)
     }
     return exprs
   }
-
+  
   static func tokenize(_ s: String) -> [String] {
-    return s.replacingOccurrences(of: "(", with: " ( ")
-      .replacingOccurrences(of: ")", with: " ) ")
-      .replacingOccurrences(of: "'", with: " ' ")
-      .replacingOccurrences(of: "\"", with: " \" ")
-      .split(separator: " ").map { String($0) }
+    return specialSymbols.reduce(s, { (acc, symb) in
+      acc.replacingOccurrences(of: symb, with: " \(symb) ")
+    }).split(separator: " ").map { String($0) }
   }
-
-  static func next(_ tokens: [String]) -> (Expr, [String])? {
+  
+  static func next(_ tokens: [String]) throws -> (Expr, [String]) {
     if tokens.isEmpty {
       return (.list([]), tokens)
     }
-
+    
     var workingTokens = tokens
     switch workingTokens[0] {
-
+    
     case "(":
       workingTokens.removeFirst()
       var elements: [Expr] = []
-      while workingTokens[0] != ")" {
-        guard let (element, remainingTokens) = next(workingTokens) else {
-          return nil
-        }
+      while !workingTokens.isEmpty && workingTokens[0] != ")" {
+        let (element, remainingTokens) = try next(workingTokens)
         workingTokens = remainingTokens
         elements.append(element)
       }
-      workingTokens.removeFirst()
+      
+      if workingTokens.isEmpty {
+        throw ParseError.unmatchedOpenParen
+      }
+      
+      workingTokens.removeFirst() // take off ")"
       return (.list(elements), workingTokens)
-
+      
     case ")":
-      return nil
-
+      throw ParseError.unmatchedCloseParen
+      
     case "'":
       // quote
       workingTokens.removeFirst()
-      guard let (element, remainingTokens) = next(workingTokens) else {
-        return nil
-      }
+      let (element, remainingTokens) = try next(workingTokens)
       return (.quote(element), remainingTokens)
-
+      
     case "\"":
       // string
       workingTokens.removeFirst()
       var elements: [String] = []
-      while workingTokens[0] != "\"" {
+      while !workingTokens.isEmpty && workingTokens[0] != "\"" {
         elements.append(workingTokens.removeFirst())
       }
+      
+      if workingTokens.isEmpty {
+        throw ParseError.unclosedString
+      }
+      
       workingTokens.removeFirst()
       let str = elements.joined(separator: " ")
       return (.string(str), workingTokens)
-
+      
     default:
       let element = workingTokens.removeFirst()
       if let int = Int(element) {

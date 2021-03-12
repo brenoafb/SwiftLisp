@@ -5,6 +5,10 @@ import FoundationNetworking
 
 typealias EnvFrame = [String:Expr]
 
+enum EnvError: Error {
+  case placeholder
+}
+
 class Environment {
 
   private var stack: [EnvFrame]

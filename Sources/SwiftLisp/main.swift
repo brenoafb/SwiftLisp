@@ -50,7 +50,7 @@ func execFile(filename: String,
     return false
   }
 
-  guard let exprs = Parser.parse(contents) else {
+  guard let exprs = try? Parser.parse(contents) else {
     print("Error parsing file \(filename)")
     return false
   }
