@@ -15,7 +15,31 @@ $ swift build
 You can then run by providing a script as input.
 
 ```bash
-$ swift run SwiftLisp examples/script.lisp
+$ swift run slisp examples/script.lisp
+```
+
+This project also implements a SwiftPM library that can be used in projects.
+
+```swift
+import SwiftLisp
+
+...
+
+func execute() {
+  let input = readInput()
+  do {
+    let env = try loadBaseFiles
+    let ast = try Parser.parse()
+    for expr in ast {
+      let result = try expr.eval(env)
+      print(result)
+    }
+  } catch let error {
+    print(error)
+  }
+}
+
+
 ```
 
 ## Examples
