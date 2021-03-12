@@ -7,16 +7,16 @@
 
 import Foundation
 
-enum ExecutionError: Error {
+public enum ExecutionError: Error {
   case fileReadError(String)
 }
 
-enum ExecOptions {
+public enum ExecOptions {
   case printParse
   case printResult
 }
 
-func loadBaseFiles(baseDir: String = "base") throws -> Environment {
+public func loadBaseFiles(baseDir: String = "base") throws -> Environment {
   let baseFiles = ["base", "stdlib", "arithmetic"]
     .map {
       Bundle.module.url(forResource: "\(baseDir)/\($0)", withExtension: "lisp")!
@@ -29,7 +29,7 @@ func loadBaseFiles(baseDir: String = "base") throws -> Environment {
   return env
 }
 
-func execFile(filename: String,
+public func execFile(filename: String,
               env: Environment,
               options: [ExecOptions] = [.printResult]) throws {
   

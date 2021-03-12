@@ -5,7 +5,7 @@ import FoundationNetworking
 
 typealias EnvFrame = [String:Expr]
 
-class Environment {
+public class Environment {
 
   private var stack: [EnvFrame]
 

@@ -4,7 +4,7 @@ protocol Evaluatable {
   func eval(_ env: Environment) throws -> Expr
 }
 
-enum EvalError: Error {
+public enum EvalError: Error {
   case invalidFunctionCall
   case unknownPrimitive(String)
   case wrongArgumentCount(String, Int, Int) // function, expected, actual
@@ -19,7 +19,7 @@ enum EvalError: Error {
 
 extension Expr: Evaluatable {
 
-  func eval(_ env: Environment) throws -> Expr {
+  public func eval(_ env: Environment) throws -> Expr {
     switch self {
     case let .list(exprs):
       return try Expr.evalList(exprs, env: env)

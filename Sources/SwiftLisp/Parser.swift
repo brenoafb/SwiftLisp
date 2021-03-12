@@ -6,13 +6,13 @@ enum ParseError: Error {
   case unclosedString
 }
 
-struct Parser {
+public struct Parser {
   
   static private let specialSymbols: [String] = [
     "(", ")", "'", "\""
   ]
   
-  static func parse(_ input: String) throws -> [Expr] {
+  public static func parse(_ input: String) throws -> [Expr] {
     var tokens = Parser.tokenize(input.replacingOccurrences(of: "\n", with: " "))
     var exprs: [Expr] = []
     while !tokens.isEmpty {
