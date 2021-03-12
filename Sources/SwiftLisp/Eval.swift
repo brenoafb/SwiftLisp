@@ -48,20 +48,19 @@ extension Expr: Evaluatable {
     } else if exprs[0].isLambda {
       // lambda application
       let function = exprs[0]
-      if let arguments = getArguments(exprs, env: env) {
-       return try apply(function: function, arguments: arguments, env: env)
-      } else {
-        throw EvalError.malformedExpression("evaluating list \(exprs)")
-      }
+      
+      let arguments = try getArguments(exprs, env: env)
+      
+      return try apply(function: function, arguments: arguments, env: env)
     } else {
       // function application
-      if let function = getFunctionBody(exprs, env: env),
-         let arguments = getArguments(exprs, env: env)
-      {
-        return try apply(function: function, arguments: arguments, env: env)
-      } else {
-        throw EvalError.malformedExpression("evaluating list \(exprs)")
+      guard let function = getFunctionBody(exprs, env: env) else {
+        throw EvalError.malformedExpression("malformed function application: error getting function body -- \(exprs)")
       }
+      
+      let arguments = try getArguments(exprs, env: env)
+      
+      return try apply(function: function, arguments: arguments, env: env)
     }
   }
 
@@ -77,8 +76,10 @@ extension Expr: Evaluatable {
     }
   }
 
-  static func getArguments(_ exprs: [Expr], env: Environment) -> [Expr]? {
-    return sequenceArray(Array(exprs.dropFirst()).map { try? $0.eval(env) })
+  static func getArguments(_ exprs: [Expr], env: Environment) throws -> [Expr] {
+    return try exprs.dropFirst().map {
+      try $0.eval(env)
+    }
   }
 
   static func apply(function: Expr, arguments: [Expr], env: Environment) throws -> Expr {
