@@ -12,7 +12,7 @@ public enum EvalError: Error {
   case invalidArgument(String) // function
   case insufficientArguments(String, Int, Int) // function, minumum, actual
   case expectedPair(String) // function
-  case malformedExpression
+  case malformedExpression(String) // context
   case unknownSymbol(String)
   case nativeFunctionError(String, String) // function, description
 }
@@ -51,7 +51,7 @@ extension Expr: Evaluatable {
       if let arguments = getArguments(exprs, env: env) {
        return try apply(function: function, arguments: arguments, env: env)
       } else {
-        throw EvalError.malformedExpression
+        throw EvalError.malformedExpression("evaluating list \(exprs)")
       }
     } else {
       // function application
@@ -60,7 +60,7 @@ extension Expr: Evaluatable {
       {
         return try apply(function: function, arguments: arguments, env: env)
       } else {
-        throw EvalError.malformedExpression
+        throw EvalError.malformedExpression("evaluating list \(exprs)")
       }
     }
   }
@@ -90,12 +90,12 @@ extension Expr: Evaluatable {
     } else {
       // lambda or lisp function application
       guard let argNames = function.getArgNames() else {
-        throw EvalError.malformedExpression
+        throw EvalError.malformedExpression("applying function \(function) with args \(arguments)")
       }
 
       let newFrame: [String:Expr] = Dictionary<String, Expr>(uniqueKeysWithValues: zip(argNames, arguments))
       guard let functionBody = function.getBody() else {
-        throw EvalError.malformedExpression
+        throw EvalError.malformedExpression("applying function \(function) with args \(arguments)")
       }
 
       env.pushFrame(newFrame)
