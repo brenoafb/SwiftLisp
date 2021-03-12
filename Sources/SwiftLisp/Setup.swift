@@ -11,6 +11,11 @@ enum ExecutionError: Error {
   case fileReadError(String)
 }
 
+enum ExecOptions {
+  case printParse
+  case printResult
+}
+
 func loadBaseFiles(baseDir: String = "base") throws -> Environment {
   let baseFiles = ["base", "stdlib", "arithmetic"]
     .map {

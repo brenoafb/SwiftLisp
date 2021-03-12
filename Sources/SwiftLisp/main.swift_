@@ -9,11 +9,6 @@ do {
   print("error: \(String(describing: error))")
 }
 
-enum ExecOptions {
-  case printParse
-  case printResult
-}
-
 enum ParenState {
   case closed
   case open
