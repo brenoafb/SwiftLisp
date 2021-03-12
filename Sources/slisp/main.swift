@@ -1,4 +1,5 @@
 import Foundation
+import SwiftLisp
 
 do {
   let env = try loadBaseFiles()
