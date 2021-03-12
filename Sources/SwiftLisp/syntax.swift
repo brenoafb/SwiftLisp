@@ -1,6 +1,10 @@
 import Foundation
 
-typealias NativeFunction = ([Any]) -> Expr?
+typealias NativeFunction = ([Any]) throws -> Expr
+
+protocol Typeable {
+  var type: String { get }
+}
 
 indirect enum Expr {
   case atom(String)
@@ -11,6 +15,29 @@ indirect enum Expr {
   case native(NativeFunction)
   case string(String)
   case nilexpr
+}
+
+extension Expr : Typeable {
+  var type: String {
+    switch self {
+    case .atom:
+      return "atom"
+    case .int:
+      return "int"
+    case .float:
+      return "float"
+    case .list:
+      return "list"
+    case .quote:
+      return "quote"
+    case .string:
+      return "string"
+    case .native:
+      return "native"
+    case .nilexpr:
+      return "nil"
+    }
+  }
 }
 
 extension Expr : CustomStringConvertible {
@@ -82,3 +109,4 @@ extension Expr : Equatable {
     return false
   }
 }
+

@@ -5,10 +5,6 @@ import FoundationNetworking
 
 typealias EnvFrame = [String:Expr]
 
-enum EnvError: Error {
-  case placeholder
-}
-
 class Environment {
 
   private var stack: [EnvFrame]
@@ -69,42 +65,49 @@ var defaultEnvironment = Environment([[
   "json-to-assoc-list": .native(jsonToAssocList),
 ]])
 
-let jsonToAssocList: NativeFunction = { (args) -> Expr? in
+let jsonToAssocList: NativeFunction = { (args) throws -> Expr in
   guard args.count == 1 else {
-    return nil
+    throw EvalError.wrongArgumentCount("jsonToAssocList", 1, args.count)
+  }
+  
+  guard let expr = args.first as? Expr else {
+    throw EvalError.nativeFunctionError("jsonToAssocList", "Error converting argument to expr")
   }
 
-  guard case let .string(json) = args.first as? Expr else {
-    return nil
+  guard case let .string(json) = expr else {
+    throw EvalError.wrongArgumentType("jsonToAssocList", "string", expr.type)
   }
 
   let data = Data(json.utf8)
 
   guard let dict = try? JSONSerialization.jsonObject(with: data, options: []) as? [String:Any] else {
-    print("Error converting data to dictionary")
-    return nil
+    throw EvalError.nativeFunctionError("jsonToAssocList", "Error converting data to dictionary")
   }
 
   guard let assocList = dictToAssocList(dict) else {
-    return nil
+    throw EvalError.nativeFunctionError("jsonToAssocList", "Error converting dictionary to assoc list")
   }
 
   return assocList
 }
 
-let request: NativeFunction = { (args) -> Expr? in
+let request: NativeFunction = { (args) throws -> Expr in
   guard args.count == 1 else {
-    return nil
+    throw EvalError.wrongArgumentCount("request", 1, args.count)
   }
 
   var sem = DispatchSemaphore(value: 0)
 
-  guard case let .string(urlstr) = args.first as? Expr else {
-    return nil
+  guard let expr = args.first as? Expr else {
+    throw EvalError.nativeFunctionError("request", "Error converting argument to expr")
+  }
+  
+  guard case let .string(urlstr) = expr else {
+    throw EvalError.wrongArgumentType("request", "string", expr.type)
   }
 
   guard let url = URL(string: urlstr) else {
-    return nil
+    throw EvalError.nativeFunctionError("request", "Error creating URL")
   }
 
   print("request url: \(url)")
@@ -139,7 +142,7 @@ let request: NativeFunction = { (args) -> Expr? in
   sem.wait()
 
   if let error = error {
-    return .list([])
+    return .list([.atom("error"), .string(String(describing:error))])
   }
 
   if let result = result {
@@ -149,7 +152,7 @@ let request: NativeFunction = { (args) -> Expr? in
   return .list([])
 }
 
-let printlnFunc: NativeFunction = { (args) -> Expr? in
+let printlnFunc: NativeFunction = { (args) throws -> Expr in
   for arg in args {
     if case let .string(s) = arg as? Expr {
       print(s, terminator: "")
@@ -161,7 +164,7 @@ let printlnFunc: NativeFunction = { (args) -> Expr? in
   return .atom("t")
 }
 
-let printFunc: NativeFunction = { (args) -> Expr? in
+let printFunc: NativeFunction = { (args) throws -> Expr in
   for arg in args {
     if case let .string(s) = arg as? Expr {
       print(s, terminator: "")
@@ -173,54 +176,72 @@ let printFunc: NativeFunction = { (args) -> Expr? in
 }
 
 func binaryIntComparison(_ comp: @escaping (Int, Int) -> Bool) -> NativeFunction {
-  let function: NativeFunction = { [f = comp] (args) -> Expr? in
+  let function: NativeFunction = { [f = comp] (args) throws -> Expr in
     guard args.count == 2 else {
-      return nil
+      throw EvalError.wrongArgumentCount("binaryIntComparison", 2, args.count)
     }
-
-    if case let .int(x) = args[0] as? Expr {
-      if case let .int(y) = args[1] as? Expr {
-        return f(x, y) ? .atom("t") : .list([])
-      }
+    
+    guard let expr0 = args[0] as? Expr,
+          let expr1 = args[1] as? Expr
+    else {
+      throw EvalError.nativeFunctionError("binaryIntComparison", "Error converting argument to expr")
     }
-
-    return nil
+    
+    guard case let .int(x) = expr0,
+          case let .int(y) = expr1
+    else {
+      throw EvalError.wrongArgumentType("binaryIntComparison", "int/int", "\(expr0.type)/\(expr1.type)")
+    }
+    
+    return f(x, y) ? .atom("t") : .list([])
   }
 
   return function
 }
 
 func binaryIntOperation(_ binop: @escaping (Int, Int) -> Int) -> NativeFunction {
-  let function: NativeFunction = { [f = binop] (args) -> Expr? in
+  let function: NativeFunction = { [f = binop] (args) throws -> Expr in
     guard args.count == 2 else {
-      return nil
+      throw EvalError.wrongArgumentCount("binaryIntOperation", 2, args.count)
+    }
+    
+    guard let expr0 = args[0] as? Expr,
+          let expr1 = args[1] as? Expr
+    else {
+      throw EvalError.nativeFunctionError("binaryIntOperation", "Error converting argument to expr")
+    }
+    
+    guard case let .int(x) = expr0,
+          case let .int(y) = expr1
+    else {
+      throw EvalError.wrongArgumentType("binaryIntOperation", "int/int", "\(expr0.type)/\(expr1.type)")
     }
 
-    if case let .int(x) = args[0] as? Expr {
-      if case let .int(y) = args[1] as? Expr {
-        return .int(f(x, y))
-      }
-    }
-
-    return nil
+    return .int(f(x, y))
   }
 
   return function
 }
 
 func binaryFloatComparison(_ comp: @escaping (Double, Double) -> Bool) -> NativeFunction {
-  let function: NativeFunction = { [f = comp] (args) -> Expr? in
+  let function: NativeFunction = { [f = comp] (args) throws -> Expr in
     guard args.count == 2 else {
-      return nil
+      throw EvalError.wrongArgumentCount("binaryFloatComparison", 2, args.count)
     }
-
-    if case let .float(x) = args[0] as? Expr {
-      if case let .float(y) = args[1] as? Expr {
-        return f(x, y) ? .atom("t") : .list([])
-      }
+    
+    guard let expr0 = args[0] as? Expr,
+          let expr1 = args[1] as? Expr
+    else {
+      throw EvalError.nativeFunctionError("binaryFloatComparison", "Error converting argument to expr")
     }
-
-    return nil
+    
+    guard case let .float(x) = expr0,
+          case let .float(y) = expr1
+    else {
+      throw EvalError.wrongArgumentType("binaryFloatComparison", "float/float", "\(expr0.type)/\(expr1.type)")
+    }
+    
+    return f(x, y) ? .atom("t") : .list([])
   }
 
   return function
@@ -228,18 +249,24 @@ func binaryFloatComparison(_ comp: @escaping (Double, Double) -> Bool) -> Native
 
 
 func binaryFloatOperation(_ binop: @escaping (Double, Double) -> Double) -> NativeFunction {
-  let function: NativeFunction = { [f = binop] (args) -> Expr? in
+  let function: NativeFunction = { [f = binop] (args) throws -> Expr in
     guard args.count == 2 else {
-      return nil
+      throw EvalError.wrongArgumentCount("binaryFloatOperation", 2, args.count)
     }
-
-    if case let .float(x) = args[0] as? Expr {
-      if case let .float(y) = args[1] as? Expr {
-        return .float(f(x, y))
-      }
+    
+    guard let expr0 = args[0] as? Expr,
+          let expr1 = args[1] as? Expr
+    else {
+      throw EvalError.nativeFunctionError("binaryFloatOperation", "Error converting argument to expr")
     }
-
-    return nil
+    
+    guard case let .float(x) = expr0,
+          case let .float(y) = expr1
+    else {
+      throw EvalError.wrongArgumentType("binaryFloatOperation", "float/float", "\(expr0.type)/\(expr1.type)")
+    }
+  
+    return .float(f(x, y))
   }
 
   return function

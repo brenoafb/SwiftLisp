@@ -59,7 +59,7 @@ func execFile(filename: String,
     if (options.contains(.printParse)) {
       print(expr)
     }
-    guard let result = expr.eval(env) else {
+    guard let result = try? expr.eval(env) else {
       print("Error evaluatng expression in file \(filename)")
       return false
     }

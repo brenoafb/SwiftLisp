@@ -1,115 +1,136 @@
 import Foundation
 
-typealias Primitive = ([Expr], Environment) -> Expr?
+typealias Primitive = ([Expr], Environment) throws -> Expr
 
 let primitives: [String:Primitive] = [
-  "quote": {(args: [Expr], env: Environment) -> Expr? in
+  
+  "quote": {(args: [Expr], env: Environment) throws -> Expr in
     guard args.count == 1 else {
-      return nil
+      throw EvalError.wrongArgumentCount("quote", 1, args.count)
     }
     return args[0]
-  },
-  "atom": {(args: [Expr], env: Environment) -> Expr? in
+  }
+  ,
+  "atom": {(args: [Expr], env: Environment) throws -> Expr in
     guard args.count == 1 else {
-      return nil
+      throw EvalError.wrongArgumentCount("atom", 1, args.count)
     }
-    switch args[0].eval(env) {
-    case nil:
-      return nil
+    
+    let evald = try args[0].eval(env)
+    
+    switch evald {
     case .atom:
       return .atom("t")
     default:
       return .list([])
     }
   },
-  "eq": {(args: [Expr], env: Environment) -> Expr? in
+  
+  "eq": {(args: [Expr], env: Environment) throws -> Expr in
     guard args.count == 2 else {
-      return nil
+      throw EvalError.wrongArgumentCount("eq", 2, args.count)
     }
 
-    guard let arg0 = args[0].eval(env),
-          let arg1 = args[1].eval(env) else {
-      return nil
-    }
+    let evald0 = try args[0].eval(env)
+    let evald1 = try args[1].eval(env)
 
-    return arg0 == arg1 ? .atom("t") : .list([])
+    return evald0 == evald1 ? .atom("t") : .list([])
   },
-  "car": {(args: [Expr], env: Environment) -> Expr? in
+  
+  "car": {(args: [Expr], env: Environment) throws -> Expr in
     guard args.count == 1 else {
-      return nil
+      throw EvalError.wrongArgumentCount("car", 1, args.count)
     }
-    switch args[0].eval(env) {
+    
+    let evald = try args[0].eval(env)
+    
+    switch evald {
     case let .list(xs):
-      return xs.first
+      guard let car = xs.first else {
+        throw EvalError.invalidArgument("car")
+      }
+      return car
     default:
-      return nil
+      throw EvalError.wrongArgumentType("car", "list", evald.type)
     }
   },
-  "cdr": {(args: [Expr], env: Environment) -> Expr? in
+  
+  "cdr": {(args: [Expr], env: Environment) throws -> Expr in
     guard args.count == 1 else {
-      return nil
+      throw EvalError.wrongArgumentCount("cdr", 1, args.count)
     }
-    switch args[0].eval(env) {
+    
+    let evald = try args[0].eval(env)
+    
+    switch evald {
     case let .list(xs):
       switch xs.count {
       case 0:
-        return nil
+        throw EvalError.invalidArgument("cdr")
       default:
         return .list(Array(xs.dropFirst()))
       }
     default:
-      return nil
+      throw EvalError.wrongArgumentType("cdr", "list", evald.type)
     }
   },
-  "cons": {(args: [Expr], env: Environment) -> Expr? in
+  
+  "cons": {(args: [Expr], env: Environment) throws -> Expr in
     guard args.count == 2 else {
-      return nil
+      throw EvalError.wrongArgumentCount("cons", 2, args.count)
     }
 
-    guard let x = args[0].eval(env),
-          case let .list(xs) = args[1].eval(env) else {
-      return nil
+    let evald0 = try args[0].eval(env)
+    let evald1 = try args[1].eval(env)
+    
+    guard case let .list(xs) = evald1 else {
+      throw EvalError.wrongArgumentType("cons", "list", evald1.type)
     }
 
-    return .list([x] + xs)
+    return .list([evald0] + xs)
   },
-  "cond": {(args: [Expr], env: Environment) -> Expr? in
+  
+  "cond": {(args: [Expr], env: Environment) throws -> Expr in
     guard args.count > 0 else {
-      return nil
+      throw EvalError.insufficientArguments("cond", 1, args.count)
     }
 
     for comp in args {
       switch comp {
       case let .list(xs):
-        guard xs.count == 2 else { return nil }
-        switch xs.first?.eval(env) {
-        case nil:
-          return nil
+        guard xs.count == 2 else { throw EvalError.expectedPair("cond") }
+        
+        let evald = try xs.first?.eval(env)
+        
+        switch evald {
         case .atom("t"):
-          return xs[1].eval(env)
+          let result = try xs[1].eval(env)
+          return result
         default:
           break
         }
       default:
-        return nil
+        throw EvalError.wrongArgumentType("cond", "list", comp.type) // not really descriptive since cond is a special form
       }
     }
     return .list([])
   },
-  "list": {(args: [Expr], env: Environment) -> Expr? in
-    guard let x = sequenceArray(args.map { $0.eval(env) }) else {
-      return nil
+  
+  "list": {(args: [Expr], env: Environment) throws -> Expr in
+    guard let x = sequenceArray(args.map { try? $0.eval(env) }) else {
+      throw EvalError.invalidArgument("list") // TODO make more descriptive
     }
 
     return .list(x)
   },
-  "define": {(args: [Expr], env: Environment) -> Expr? in
+  
+  "define": {(args: [Expr], env: Environment) throws -> Expr in
     guard args.count == 2 else {
-      return nil
+      throw EvalError.wrongArgumentCount("define", 2, args.count)
     }
 
     guard case let .atom(key) = args[0] else {
-      return nil
+      throw EvalError.wrongArgumentType("define", "atom", args[0].type)
     }
 
     let expr = args[1]
@@ -118,73 +139,58 @@ let primitives: [String:Primitive] = [
       return .atom("t")
     }
 
-    guard let value = expr.eval(env) else {
-      return .list([])
-    }
+    let value = try expr.eval(env)
 
     env.addBinding(key: key, value: value)
 
     return .atom("t")
   },
-  "type": {(args: [Expr], env: Environment) -> Expr? in
+  
+  "type": {(args: [Expr], env: Environment) throws -> Expr in
     guard args.count == 1 else {
-      return nil
+      throw EvalError.wrongArgumentCount("type", 1, args.count)
     }
 
-    guard let value = args[0].eval(env) else {
-      return .list([])
-    }
+    let value = try args[0].eval(env)
 
-    switch value {
-    case .atom:
-      return .atom("atom")
-    case .int:
-      return .atom("int")
-    case .float:
-      return .atom("float")
-    case .list:
-      return .atom("list")
-    case .quote:
-      return .atom("quote")
-    case .string:
-      return .atom("string")
-    case .native:
-      return .atom("native")
-    default:
-      return .list([])
-    }
+    return .atom(value.type)
   },
-  "seq": {(args: [Expr], env: Environment) -> Expr? in
+  
+  "seq": {(args: [Expr], env: Environment) throws -> Expr in
     guard args.count > 0 else {
       return .list([])
     }
 
-    guard let results = sequenceArray(Array(args).map { $0.eval(env) }) else {
-      return nil
+    guard let results = sequenceArray(Array(args).map { try? $0.eval(env) }) else {
+      throw EvalError.invalidArgument("seq")
     }
 
-    return results.last
+    guard let last = results.last else {
+      throw EvalError.invalidArgument("seq")
+    }
+    
+    return last
   },
-  "foldr": {(args: [Expr], env: Environment) -> Expr? in
+  
+  "foldr": {(args: [Expr], env: Environment) throws -> Expr in
     guard args.count == 3 else {
-      return .list([])
+      throw EvalError.wrongArgumentCount("foldr", 3, args.count)
     }
 
-    guard let function = args[0].eval(env),
-          let initialValue = args[1].eval(env),
-          case let .list(xs) = args[2].eval(env)
-          else {
-    return nil
+    let function = try args[0].eval(env)
+    let initialValue = try args[1].eval(env)
+    let list = try args[2].eval(env)
+    
+    guard case let .list(xs) = list else {
+      throw EvalError.wrongArgumentType("foldr", "list", list.type)
     }
 
     var acc: Expr = initialValue
 
     for x in xs.reversed() {
-      guard let result = Expr.apply(function: function, arguments: [x, acc], env: env) else {
-        return nil
-      }
-      acc = result
+      acc = try Expr.apply(function: function, arguments: [x, acc], env: env)
     }
+    
     return acc
   }
 ]

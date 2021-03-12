@@ -1,17 +1,33 @@
 import Foundation
 
 protocol Evaluatable {
-  func eval(_ env: Environment) -> Expr?
+  func eval(_ env: Environment) throws -> Expr
+}
+
+enum EvalError: Error {
+  case invalidFunctionCall
+  case unknownPrimitive(String)
+  case wrongArgumentCount(String, Int, Int) // function, expected, actual
+  case wrongArgumentType(String, String, String) // function, expected, actual
+  case invalidArgument(String) // function
+  case insufficientArguments(String, Int, Int) // function, minumum, actual
+  case expectedPair(String) // function
+  case malformedExpression
+  case unknownSymbol(String)
+  case nativeFunctionError(String, String) // function, description
 }
 
 extension Expr: Evaluatable {
 
-  func eval(_ env: Environment) -> Expr? {
+  func eval(_ env: Environment) throws -> Expr {
     switch self {
     case let .list(exprs):
-      return Expr.evalList(exprs, env: env)
+      return try Expr.evalList(exprs, env: env)
     case let .atom(x):
-      return env.lookup(x)
+      guard let result = env.lookup(x) else {
+        throw EvalError.unknownSymbol(x)
+      }
+      return result
     case let .quote(x):
       return x
     default:
@@ -19,13 +35,13 @@ extension Expr: Evaluatable {
     }
   }
 
-  static private func evalList(_ exprs: [Expr], env: Environment) -> Expr? {
+  static private func evalList(_ exprs: [Expr], env: Environment) throws -> Expr {
     if exprs.isEmpty {
       return Expr.list([])
     }
 
     if exprs[0].isPrimitive {
-      return evalPrimitive(exprs, env)
+      return try evalPrimitive(exprs, env)
     } else if Expr.list(exprs).isLambda {
       // a lambda evaluates to itself
       return .list(exprs)
@@ -33,18 +49,20 @@ extension Expr: Evaluatable {
       // lambda application
       let function = exprs[0]
       if let arguments = getArguments(exprs, env: env) {
-        return apply(function: function, arguments: arguments, env: env)
+       return try apply(function: function, arguments: arguments, env: env)
+      } else {
+        throw EvalError.malformedExpression
       }
     } else {
       // function application
       if let function = getFunctionBody(exprs, env: env),
          let arguments = getArguments(exprs, env: env)
       {
-        return apply(function: function, arguments: arguments, env: env)
+        return try apply(function: function, arguments: arguments, env: env)
+      } else {
+        throw EvalError.malformedExpression
       }
     }
-
-    return nil
   }
 
   static func getFunctionBody(_ exprs: [Expr], env: Environment) -> Expr? {
@@ -60,30 +78,35 @@ extension Expr: Evaluatable {
   }
 
   static func getArguments(_ exprs: [Expr], env: Environment) -> [Expr]? {
-    return sequenceArray(Array(exprs.dropFirst()).map { $0.eval(env) })
+    return sequenceArray(Array(exprs.dropFirst()).map { try? $0.eval(env) })
   }
 
-  static func apply(function: Expr, arguments: [Expr], env: Environment) -> Expr? {
+  static func apply(function: Expr, arguments: [Expr], env: Environment) throws -> Expr {
     if case let .native(f) = function {
       // call native function
       let argArray: [Any] = arguments
-      return f(argArray)
+      let result = try f(argArray)
+      return result
     } else {
       // lambda or lisp function application
       guard let argNames = function.getArgNames() else {
-        return nil
+        throw EvalError.malformedExpression
       }
 
       let newFrame: [String:Expr] = Dictionary<String, Expr>(uniqueKeysWithValues: zip(argNames, arguments))
-      let functionBody = function.getBody()
+      guard let functionBody = function.getBody() else {
+        throw EvalError.malformedExpression
+      }
 
       env.pushFrame(newFrame)
-      guard let result = functionBody?.eval(env) else {
+      do {
+        let result = try functionBody.eval(env)
         env.popFrame()
-        return nil
+        return result
+      } catch let error {
+        env.popFrame()
+        throw error
       }
-      env.popFrame()
-      return result
     }
   }
 
@@ -142,18 +165,18 @@ extension Expr: Evaluatable {
     }
   }
 
-  static private func evalPrimitive(_ exprs: [Expr], _ env: Environment) -> Expr? {
+  static private func evalPrimitive(_ exprs: [Expr], _ env: Environment) throws -> Expr {
     guard case let .atom(name) = exprs.first else {
-      return nil
+      throw EvalError.invalidFunctionCall
     }
 
     guard let function = primitives[name] else {
-      return nil
+      throw EvalError.unknownPrimitive(name)
     }
 
     let args = Array(exprs.dropFirst())
 
-    return function(args, env)
+    return try function(args, env)
   }
 
 }
