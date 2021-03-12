@@ -6,7 +6,7 @@ do {
     let _ = try execFile(filename: argument, env: env, options: [.printParse, .printResult])
   }
 } catch let error {
-  print(String(describing: error))
+  print("error: \(String(describing: error))")
 }
 
 enum ExecOptions {
